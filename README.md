@@ -30,10 +30,12 @@ analysis, architecture, learning design, UI/UX plan, user journeys, and the buil
 - **The current public preview runs with warmth live**: Groq answers free-chat and feelings turns
   (~0.7 s to first token, streaming to the bubble); chip/teaching turns stay instant and
   deterministic. `/api/health` lists exactly what's live.
-- **Want live generations instead of the scripted bank?** Paste one free key — `GEMINI_API_KEY`
-  (aistudio.google.com) and/or `GROQ_API_KEY` (console.groq.com), both card-free — into Render's
-  environment (or `.env` locally). Free-chat and feelings turns then stream from the model within
-  the budget above; teaching/chip turns stay instant and deterministic by design.
+- **Want live generations instead of the scripted bank?** Paste one free key — `GROQ_API_KEY`
+  (console.groq.com, card-free) — into Render's environment (or `.env` locally). A
+  `GEMINI_API_KEY` (aistudio.google.com) is also supported as an optional extra rung, but on some
+  networks Gemini's first byte is far too slow to ever serve. Free-chat and feelings turns then
+  stream from the model within the budget above; teaching/chip turns stay instant and
+  deterministic by design.
 
 ### 3-minute tour
 
