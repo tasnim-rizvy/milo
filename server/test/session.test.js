@@ -48,6 +48,22 @@ test('study refusal opens play mode (chips, no lesson push)', async () => {
   assert.ok((t.events || []).some((e) => e.payload?.reason === 'study refusal — play instead'));
 });
 
+test('free chat never stacks a second question in one turn', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  const child = store.child('maya');
+  const { id } = createSession(store, child, 'learn');
+  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  let t = await handleInput(store, child, id, { type: 'text', text: 'i have a big red ball' });
+  for (let i = 0; i < 3; i++) {
+    if (t.expect?.type === 'free') {
+      const questions = t.messages.filter((m) => /[?？]/.test(m.say)).length;
+      assert.ok(questions <= 1, `at most one question per turn, got: ${say(t)}`);
+    }
+    t = await handleInput(store, child, id, { type: 'text', text: 'my ball is shiny and round' });
+  }
+});
+
 test('wrong chip → recast (never the word "wrong"); correct chip → star + praise', async () => {
   const store = openStore(':memory:');
   seedDemo(store);

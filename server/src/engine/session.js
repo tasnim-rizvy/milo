@@ -1141,8 +1141,11 @@ async function conversationTurn(store, child, state, text, events, onChunk) {
     });
   }
 
+  // Don't stack a second scripted question on top of a reply that already asks
+  // one (the duplicate "And then what happened?" pile-up).
+  const asks = /[?？]/.test(llm.say.slice(-40));
   return turn(state, {
-    messages: [msg(llm.say, 'cheer'), msg(pick(LINES.conversationOpeners), 'happy')],
+    messages: [msg(llm.say, 'cheer'), asks ? null : msg(pick(LINES.conversationOpeners), 'happy')].filter(Boolean),
     expect: { type: 'free' },
     lessonAction: 'present',
     llm: llm.usedLLM, llmProvider: llm.provider || null,
