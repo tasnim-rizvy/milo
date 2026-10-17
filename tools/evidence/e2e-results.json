@@ -1,122 +1,126 @@
-[
-  {
-    "name": "server health",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "home renders with 4 tiles + stickers",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "demo profiles visible (Maya/Aarav switcher)",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "greeting asks how Maya feels (mood chips)",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "first task shown with ≥2 chips (tap-only playable)",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "latency badge is live",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "wrong chip → recast, never the word \"wrong\"",
-    "pass": true,
-    "detail": "Ooh, SO close! That one is thank you 🙏. This is hi 👋. Tap "
-  },
-  {
-    "name": "recast keeps the same question alive (retry)",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "correct chip → star earned (⭐ ≥ 1)",
-    "pass": true,
-    "detail": "stars=1"
-  },
-  {
-    "name": "star counter visible in UI",
-    "pass": true,
-    "detail": "⭐ 1"
-  },
-  {
-    "name": "\"i'm tired\" → support mode",
-    "pass": true,
-    "detail": "mode=support"
-  },
-  {
-    "name": "calm backdrop (breathing balloon) visible",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "breathe offers gentle next steps",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "bye → goodbye ritual + end card",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "end card visible with stars",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "\"Play again\" returns home (no dead end)",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "gate-ready Aarav lands in the STAGE check",
-    "pass": true,
-    "detail": "phase=STAGE"
-  },
-  {
-    "name": "all 5 stage-check tasks answered",
-    "pass": true,
-    "detail": "answered=5"
-  },
-  {
-    "name": "graduation confetti + badge pop",
-    "pass": true,
-    "detail": "confetti=true badge=true stars=9"
-  },
-  {
-    "name": "graduation star bonus applied (≥5)",
-    "pass": true,
-    "detail": "stars=9"
-  },
-  {
-    "name": "L3 preview ships word chips (sentence building)",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "word chips compose a sentence in the composer",
-    "pass": true,
-    "detail": "I'm fine thank you"
-  },
-  {
-    "name": "finale → end card with summary",
-    "pass": true,
-    "detail": ""
-  },
-  {
-    "name": "Aarav promoted L2 → L3 in the profile",
-    "pass": true,
-    "detail": "level=3"
-  }
-]
+{
+  "base": "https://highlights-kept-bits-abs.trycloudflare.com",
+  "ranAt": "2026-10-17T20:14:26.069Z",
+  "checks": [
+    {
+      "name": "server health",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "home renders with 4 tiles + stickers",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "demo profiles visible (Maya/Aarav switcher)",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "greeting asks how Maya feels (mood chips)",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "first task shown with ≥2 chips (tap-only playable)",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "latency badge is live",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "wrong chip → recast, never the word \"wrong\"",
+      "pass": true,
+      "detail": "Nice try! good morning is 🌅 — but I asked for hi 👋. Find h"
+    },
+    {
+      "name": "recast keeps the same question alive (retry)",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "correct chip → star earned (⭐ ≥ 1)",
+      "pass": true,
+      "detail": "stars=1"
+    },
+    {
+      "name": "star counter visible in UI",
+      "pass": true,
+      "detail": "⭐ 1"
+    },
+    {
+      "name": "\"i'm tired\" → support mode",
+      "pass": true,
+      "detail": "mode=support"
+    },
+    {
+      "name": "calm backdrop (breathing balloon) visible",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "breathe offers gentle next steps",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "bye → goodbye ritual + end card",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "end card visible with stars",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "\"Play again\" returns home (no dead end)",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "gate-ready Aarav lands in the STAGE check",
+      "pass": true,
+      "detail": "phase=STAGE"
+    },
+    {
+      "name": "all 5 stage-check tasks answered",
+      "pass": true,
+      "detail": "answered=5"
+    },
+    {
+      "name": "graduation confetti + badge pop",
+      "pass": true,
+      "detail": "confetti=true badge=true stars=9"
+    },
+    {
+      "name": "graduation star bonus applied (≥5)",
+      "pass": true,
+      "detail": "stars=9"
+    },
+    {
+      "name": "L3 preview ships word chips (sentence building)",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "word chips compose a sentence in the composer",
+      "pass": true,
+      "detail": "I'm fine thank you"
+    },
+    {
+      "name": "finale → end card with summary",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Aarav promoted L2 → L3 in the profile",
+      "pass": true,
+      "detail": "level=3"
+    }
+  ]
+}
