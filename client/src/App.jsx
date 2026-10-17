@@ -3,7 +3,6 @@ import { getChildren, getProgress, resetDemo, startSession, sendMessage } from '
 import { sound } from './sound.js';
 import Home from './components/Home.jsx';
 import ChatView from './components/ChatView.jsx';
-import CalmBackdrop from './components/CalmBackdrop.jsx';
 import Confetti from './components/Confetti.jsx';
 import BadgePop from './components/BadgePop.jsx';
 import StickerBook from './components/StickerBook.jsx';
@@ -227,8 +226,7 @@ export default function App() {
   }, [latSamples]);
 
   return (
-    <div className={`app ${calm ? 'is-calm' : ''}`}>
-      {calm && <CalmBackdrop />}
+    <div className={`app ${calm ? 'is-calm' : ''}${screen !== 'home' ? ' is-chat' : ''}`}>
       {screen === 'home' ? (
         <Home
           child={child}
@@ -243,6 +241,7 @@ export default function App() {
       ) : (
         <ChatView
           child={child}
+          calm={calm}
           mode={mode}
           stars={stars}
           latency={lat}

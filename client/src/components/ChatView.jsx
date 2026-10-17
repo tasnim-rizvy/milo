@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import CalmBackdrop from './CalmBackdrop.jsx';
 
 const MOOD_FACE = { happy: '😊', cheer: '🤗', care: '💛', calm: '🫧', celebrate: '🎉', think: '🤔' };
 const MODES = {
@@ -12,7 +13,7 @@ const wordsOf = (endCard) =>
   (endCard?.words || []).map((w) => (typeof w === 'string' ? w : w?.text || '')).filter(Boolean);
 
 export default function ChatView({
-  child, mode, stars, latency, messages, typing, streamText, options, wordChips,
+  child, calm, mode, stars, latency, messages, typing, streamText, options, wordChips,
   input, setInput, onSend, onChip, onExit, endCard, onPlayAgain, busy,
   onStickers, muted, onToggleMute,
 }) {
@@ -91,6 +92,10 @@ export default function ChatView({
         )}
         <div ref={endRef} />
       </div>
+
+      {calm && !endCard && (
+        <div className="calm-strip"><CalmBackdrop /></div>
+      )}
 
       {!endCard && options && options.length > 0 && (
         <div className="chips">

@@ -44,6 +44,9 @@ button { -webkit-tap-highlight-color: transparent; }
   transition: background 0.6s ease;
 }
 .app.is-calm { background: linear-gradient(180deg, #FFF3F7 0%, var(--cream) 55%); }
+/* Chat screen: lock to the viewport so messages scroll *inside* the list and
+   the calm strip, chips and composer always stay visible. */
+.app.is-chat { height: 100dvh; overflow: hidden; }
 
 /* ── Top bar ─────────────────────────────────────────────── */
 .topbar {
@@ -288,16 +291,13 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .btn-primary:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--orange-deep); }
 
-/* ── Calm corner backdrop ────────────────────────────────── */
-.calm-backdrop {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: flex-start; padding-top: 12vh;
-}
+/* ── Calm corner: a breathing buddy in the flow (never over text) ── */
+.calm-strip { display: flex; justify-content: center; padding: 2px 0 4px; }
+.calm-backdrop { display: flex; flex-direction: column; align-items: center; pointer-events: none; }
 .balloon {
-  width: min(190px, 36vw); aspect-ratio: 1; border-radius: 50%;
+  width: min(96px, 24vw); aspect-ratio: 1; border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #FFE4EC, var(--blush) 72%);
-  box-shadow: 0 12px 44px rgba(255, 157, 177, 0.45);
+  box-shadow: 0 10px 30px rgba(255, 157, 177, 0.40);
   animation: breathe 8s ease-in-out infinite;
 }
 @keyframes breathe {
@@ -305,8 +305,8 @@ button { -webkit-tap-highlight-color: transparent; }
   50% { transform: scale(1); }
 }
 .balloon-label {
-  margin-top: 16px; font-family: 'Baloo 2', ui-rounded, sans-serif;
-  font-weight: 700; font-size: 20px; color: #B76E82;
+  margin-top: 6px; font-family: 'Baloo 2', ui-rounded, sans-serif;
+  font-weight: 700; font-size: 15px; color: #B76E82;
 }
 
 /* ── Confetti ────────────────────────────────────────────── */
