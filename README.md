@@ -27,6 +27,9 @@ analysis, architecture, learning design, UI/UX plan, user journeys, and the buil
 - **No API keys needed.** The engine ships with a scripted fast-path, so every feature works with
   zero configuration (`llm: []` in `/api/health`). Gemini/Groq keys, when present, only add warmth
   on top — the ladder falls back to scripted within a 1.2 s first-token budget.
+- **The current public preview runs with warmth live**: Groq answers free-chat and feelings turns
+  (~0.7 s to first token, streaming to the bubble); chip/teaching turns stay instant and
+  deterministic. `/api/health` lists exactly what's live.
 - **Want live generations instead of the scripted bank?** Paste one free key — `GEMINI_API_KEY`
   (aistudio.google.com) and/or `GROQ_API_KEY` (console.groq.com), both card-free — into Render's
   environment (or `.env` locally). Free-chat and feelings turns then stream from the model within
@@ -52,7 +55,7 @@ Live evidence in [`tools/evidence/`](tools/evidence/) was produced against the p
 
 | Brief requirement | Where it lives | Verified by |
 |---|---|---|
-| **R1 · Teaches step-by-step, progress across sessions** | `server/src/engine/curriculum.js` — Leitner boxes, 80% mastery gate (coverage & first-try), 5-task stage check, graduation | 43 server tests · requirement-check `[R1]` ×3 (L1 lesson, gate-ready profile, `phase=STAGE`) · e2e “all 5 stage-check tasks answered”, “Aarav promoted L2 → L3” |
+| **R1 · Teaches step-by-step, progress across sessions** | `server/src/engine/curriculum.js` — Leitner boxes, 80% mastery gate (coverage & first-try), 5-task stage check, graduation | 47 server tests · requirement-check `[R1]` ×3 (L1 lesson, gate-ready profile, `phase=STAGE`) · e2e “all 5 stage-check tasks answered”, “Aarav promoted L2 → L3” |
 | **R2 · Not every turn is a lesson** | `server/src/engine/modes.js` — learning / conversation / engagement / support, hysteresis + idle cascade | requirement-check `[R2]` ×3 (`"i want plaay!"` → engagement, `"i'm tired"` → support, 3 misses → support) |
 | **R3 · Social-emotional learning woven in** | `server/src/engine/sel.js` + `session.js` — recasts without the word “wrong”, effort praise, feeling check-ins, Calm Corner, goodbye ritual | requirement-check `[R3]` ×4 · e2e calm-corner & end-card checks · tests |
 | **R4 · Remembers context across sessions** | learner card + spaced-repetition due list + recent turns (`session.js`, `curriculum.js`) | requirement-check `[R4]` ×2 (“Yesterday: elephant 🐘”, interests “dinosaurs”) |
@@ -94,7 +97,7 @@ npm run dev:client   # Vite on :5173, proxies /api → :3001
 ## Tests & evidence
 
 ```bash
-npm test             # 43 unit/integration tests (node --test)
+npm test             # 47 unit/integration tests (node --test)
 npm run requirements # 18/18 live requirement checks → tools/evidence/requirement-check.json
 npm run latency      # latency suites A/B/C     → tools/evidence/latency.json
 npm run e2e          # 24-check headless browser tour → tools/evidence/ (+ 10 screenshots)
