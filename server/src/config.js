@@ -31,13 +31,19 @@ export const config = {
     ttftBudgetMs: Number(process.env.LLM_TTFT_BUDGET_MS || 1200),
     totalBudgetMs: Number(process.env.LLM_TOTAL_BUDGET_MS || 2500),
     maxTokens: 160,
+    // Optional provider order override, e.g. LLM_PRIORITY=groq,gemini — for
+    // networks where one provider answers far faster than the other.
+    priority: (process.env.LLM_PRIORITY || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
   },
 
   idleNudgeMs: 45000,
 };
 
 export function llmProviders() {
-  return [
+  const all = [
     config.gemini.key && {
       name: 'gemini',
       apiKey: config.gemini.key,
@@ -51,6 +57,12 @@ export function llmProviders() {
       kind: 'groq',
     },
   ].filter(Boolean);
+  if (!config.llm.priority.length) return all;
+  const rank = (p) => {
+    const i = config.llm.priority.indexOf(p.name);
+    return i === -1 ? 99 : i;
+  };
+  return [...all].sort((a, b) => rank(a) - rank(b));
 }
 
 export function llmEnabled() {
