@@ -169,7 +169,11 @@ async function main() {
     ok('NO-PARENT', `all ${strings.length} user-facing lines never address parents/grown-ups`, bad.length === 0, bad.slice(0, 2).join(' | '));
   }
 
-  writeFileSync(join(EVID, 'requirement-check.json'), JSON.stringify(results, null, 2));
+  writeFileSync(join(EVID, 'requirement-check.json'), JSON.stringify({
+    base: process.env.E2E_BASE || 'http://localhost:3001',
+    ranAt: new Date().toISOString(),
+    checks: results,
+  }, null, 2));
   const failed = results.filter((r) => !r.pass);
   console.log(`\n${results.length - failed.length}/${results.length} requirement checks passed`);
   process.exitCode = failed.length ? 1 : 0;

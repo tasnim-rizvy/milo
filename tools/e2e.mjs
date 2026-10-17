@@ -203,7 +203,7 @@ async function main() {
   ok('Aarav promoted L2 → L3 in the profile', aarav.level === 3, `level=${aarav.level}`);
 
   await browser.close();
-  writeFileSync(join(EVID, 'e2e-results.json'), JSON.stringify(results, null, 2));
+  writeFileSync(join(EVID, 'e2e-results.json'), JSON.stringify({ base: BASE, ranAt: new Date().toISOString(), checks: results }, null, 2));
   const failed = results.filter((r) => !r.pass);
   console.log(`\n${results.length - failed.length}/${results.length} e2e checks passed`);
   process.exitCode = failed.length ? 1 : 0;
@@ -212,7 +212,7 @@ async function main() {
 main().catch(async (err) => {
   console.error('e2e crashed:', err.message);
   results.push({ name: `crashed: ${err.message}`, pass: false, detail: '' });
-  try { writeFileSync(join(EVID, 'e2e-results.json'), JSON.stringify(results, null, 2)); } catch {}
+  try { writeFileSync(join(EVID, 'e2e-results.json'), JSON.stringify({ base: BASE, ranAt: new Date().toISOString(), checks: results }, null, 2)); } catch {}
   try { await browserRef?.close(); } catch {}
   process.exitCode = 1;
   setTimeout(() => process.exit(1), 1500).unref(); // never hang on a wedged socket
