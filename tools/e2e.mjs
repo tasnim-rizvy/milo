@@ -3,9 +3,10 @@
 // then Aarav: preloaded mid-L2 → stage check → graduation → end card.
 // Usage: node tools/e2e.mjs   (server must be running; client must be built)
 import puppeteer from 'puppeteer-core';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { getJson, postJson } from './http.mjs';
 
 const BASE = process.env.E2E_BASE || 'http://localhost:3001';
@@ -30,10 +31,14 @@ async function main() {
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: true,
-    userDataDir: '/tmp/opencode/chromeprof',
+    timeout: 60000,
+    protocolTimeout: 90000,
+    userDataDir: mkdtempSync(join(tmpdir(), 'milo-e2e-')), // fresh profile every run
     args: ['--no-first-run', '--no-default-browser-check', '--disable-dev-shm-usage', '--password-store=gnome-libsecret'],
   });
   const page = await browser.newPage();
+  page.setDefaultTimeout(15000);
+  page.setDefaultNavigationTimeout(20000);
   await page.setViewport({ width: 900, height: 1100, deviceScaleFactor: 1 });
 
   const clickText = async (selector, text) => {
@@ -133,8 +138,7 @@ async function main() {
   await clickText('.chip', 'happy');
   m = await waitTurn(1);
 
-  const devText = await page.$eval('.devpanel pre', (e) => e.textContent).catch(() => '');
-  ok('gate-ready Aarav lands in the STAGE check', devText.includes('"phase": "STAGE"'), 'dev panel shows STAGE');
+  ok('gate-ready Aarav lands in the STAGE check', m.phase === 'STAGE', `phase=${m.phase}`);
   await page.screenshot({ path: join(EVID, '08-stage-check.png') });
 
   // answer 5 mixed tasks using the engine's own expectations
