@@ -88,6 +88,7 @@ export default function App() {
         options: turn.options || null,
         wordChips: turn.wordChips || null,
         mode: turn.mode,
+        phase: turn.dev?.phase || null,
         stars: turn.effects?.totalStars ?? 0,
         endCard: !!turn.effects?.endCard,
         msgs: (turn.messages || []).map((m) => m.say),
