@@ -30,7 +30,9 @@ export const config = {
     // next provider is tried; if none make it, the scripted line plays (≤1.2 s).
     ttftBudgetMs: Number(process.env.LLM_TTFT_BUDGET_MS || 1200),
     totalBudgetMs: Number(process.env.LLM_TOTAL_BUDGET_MS || 2500),
-    maxTokens: 160,
+    // Enough headroom for GPT-OSS hidden reasoning + one short child-friendly
+    // reply; a stream cut by this budget is detected and replaced (providers.js).
+    maxTokens: Number(process.env.LLM_MAX_TOKENS || 220),
     // Optional provider order override, e.g. LLM_PRIORITY=groq,gemini — for
     // networks where one provider answers far faster than the other.
     priority: (process.env.LLM_PRIORITY || '')

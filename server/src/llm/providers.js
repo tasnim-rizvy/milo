@@ -11,11 +11,18 @@ export async function* streamGemini({ apiKey, model }, { system, user, maxTokens
     contents: [{ role: 'user', parts: [{ text: user }] }],
     generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
   };
-  yield* sseFetch(url, { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { firstTokenMs, totalMs, signal }, (obj) => {
-    const parts = obj?.candidates?.[0]?.content?.parts;
+  let cut = false;
+  for await (const chunk of sseFetch(url, { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { firstTokenMs, totalMs, signal }, (obj) => {
+    const cand = obj?.candidates?.[0];
+    // MAX_TOKENS / SAFETY / RECITATION — never commit a broken line as final.
+    if (cand?.finishReason && cand.finishReason !== 'STOP') cut = true;
+    const parts = cand?.content?.parts;
     if (!Array.isArray(parts)) return '';
     return parts.map((p) => p.text || '').join('');
-  });
+  })) {
+    yield chunk;
+  }
+  if (cut) throw new Error('llm-truncated');
 }
 
 export async function* streamGroq({ apiKey, model }, { system, user, maxTokens }, { firstTokenMs, totalMs, signal }) {
@@ -35,10 +42,18 @@ export async function* streamGroq({ apiKey, model }, { system, user, maxTokens }
       { role: 'user', content: user },
     ],
   };
-  yield* sseFetch(url, {
+  let cut = false;
+  for await (const chunk of sseFetch(url, {
     headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
     body: JSON.stringify(body),
-  }, { firstTokenMs, totalMs, signal }, (obj) => obj?.choices?.[0]?.delta?.content || '');
+  }, { firstTokenMs, totalMs, signal }, (obj) => {
+    const choice = obj?.choices?.[0];
+    if (choice?.finish_reason === 'length') cut = true;
+    return choice?.delta?.content || '';
+  })) {
+    yield chunk;
+  }
+  if (cut) throw new Error('llm-truncated');
 }
 
 async function* sseFetch(url, init, { firstTokenMs, totalMs, signal }, extract) {
