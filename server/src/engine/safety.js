@@ -92,6 +92,9 @@ export function sanitizeModelText(text, fallback = '') {
   const sentences = s.split(/(?<=[.!?…])\s+/).filter(Boolean);
   const kept = sentences.filter((sentence) => !banned.some((r) => r.test(sentence)));
   let replaced = kept.length !== sentences.length;
+  // Any banned content (parent talk, adult topics…) rejects the whole line —
+  // a partially-redacted model sentence is not worth the risk.
+  if (replaced && fallback) return { text: fallback, replaced: true };
 
   let out = kept.join(' ');
   if (!out.trim()) return { text: fallback, replaced: true };

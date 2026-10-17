@@ -22,6 +22,16 @@ const pickArr = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 const msg = (say, mood = 'happy') => ({ say, mood });
 
+// Did the session advance (new question / phase / mood) during this input?
+// Used by the double-tap guard. Counters and options are intentionally absent.
+const progressSigOf = (s) => JSON.stringify([
+  s.phase, s.ended, s.moodStart, s.moodEnd,
+  s.current?.item?.id || null, s.current?.stage || null, s.current?.presentedAt || 0,
+  s.stage?.idx ?? null,
+  s.playTask?.presentedAt || 0, s.playTask?.round || 0,
+  s.playTask?.beatIdx ?? null, s.playTask?.sceneIdx ?? null, s.playTask?.storyId || null,
+]);
+
 function snapshot(state) {
   return {
     phase: state.phase,
@@ -150,6 +160,10 @@ export function createSession(store, child, intent = 'learn') {
       options: moodChips(),
       expect: { type: 'mood' },
     });
+    // returning after a gap: reference it warmly (docs/04 §4.1)
+    if (child.last_seen && now() - child.last_seen > 20 * 3600e3) {
+      first.messages.push(msg(`I missed you, ${child.nickname}! I kept our words warm. 🦊`, 'cheer'));
+    }
   }
   persist(store, id, state);
   return { id, turn: first };
@@ -197,11 +211,25 @@ export async function handleInput(store, child, sessionId, input, onChunk = null
   const t = now();
 
   const sig = `${input.type}:${input.chipId || input.text || ''}`;
-  if (t - (state.counters.lastSigAt || 0) < 650 && sig === state.counters.lastSig) {
-    return turn(state, { messages: [], lessonAction: 'none' });
+  // Double-tap guard: the same chip tapped twice in a row within 650 ms is
+  // ignored — but ONLY after an accepted answer, so deliberate retries after
+  // a recast still count (and the no-op turn keeps the question alive).
+  if (
+    input.type === 'chip' &&
+    sig === state.counters.lastSig &&
+    t - (state.counters.lastSigAt || 0) < 650 &&
+    state.counters.lastAccepted
+  ) {
+    return turn(state, {
+      messages: [],
+      options: state.lastOptions.length ? state.lastOptions : null,
+      expect: state.expect,
+      lessonAction: 'none',
+    });
   }
   state.counters.lastSig = sig;
   state.counters.lastSigAt = t;
+  const sigBefore = progressSigOf(state);
 
   if (state.ended) {
     return turn(state, { messages: [msg('Bye-bye! Milo is waving! 👋', 'cheer')], lessonAction: 'none' });
@@ -248,6 +276,7 @@ export async function handleInput(store, child, sessionId, input, onChunk = null
   }
 
   for (const e of events) store.addEvent(sessionId, child.key, e.type, e.payload);
+  state.counters.lastAccepted = progressSigOf(state) !== sigBefore;
   result.events = events;
   persist(store, sessionId, state);
   return result;
@@ -607,6 +636,9 @@ async function handleText(store, child, state, text, events, onChunk) {
       return startPlay(store, child, state, events);
     }
 
+    case 'bye':
+      return endNow(store, child, state, events);
+
     case 'love':
       return turn(state, {
         messages: [msg(pick(LINES.loveYouBounded), 'cheer')],
@@ -745,7 +777,7 @@ async function onCorrect(store, child, state, item, { via, match }, events) {
     state.stage.idx += 1;
     if (state.stage.idx >= 5) return stageCheckFinish(store, child, state, events);
     const progress = pick(LINES.stageCheckProgress)
-      .replaceAll('{n}', String(state.stage.correct + 1))
+      .replaceAll('{n}', String(state.stage.results.filter(Boolean).length))
       .replaceAll('{left}', String(5 - state.stage.idx));
     const nt = presentStageTask(store, child, state, events);
     const r = turn(state, {
@@ -1395,6 +1427,7 @@ function handleWrapMood(store, child, state, chipId, events) {
 
 function handleWrapText(store, child, state, text, events) {
   const t = normalize(text);
+  if (/\bbye\b|goodbye|bye bye/.test(t)) return endNow(store, child, state, events);
   let mood = null;
   if (/(happy|good|fine|great|well|yay)/.test(t)) mood = 'happy';
   else if (/(sleepy|tired)/.test(t)) mood = 'sleepy';

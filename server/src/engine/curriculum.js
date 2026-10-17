@@ -20,6 +20,12 @@ export function applyAnswer(store, child, item, correct, firstTry, now = Date.no
   row.first_try_total += 1;
   if (firstTry) row.first_try += 1;
 
+  // "Next due" follows the SOURCE box for correct climbers (docs/03 §2.1
+  // "Next due" column: box1→same session, box2→next day, box3→3 days,
+  // box4→7 days, box5→14 days); a miss drops the item and re-schedules it
+  // quickly using the NEW (lower) box.
+  const srcBox = row.box === 0 ? 1 : row.box;
+
   if (correct) {
     row.correct += 1;
     switch (row.box) {
@@ -42,7 +48,7 @@ export function applyAnswer(store, child, item, correct, firstTry, now = Date.no
     }
   }
   row.last_seen = now;
-  row.next_due = now + BOX_INTERVAL_MS[row.box === 0 ? 1 : row.box];
+  row.next_due = now + BOX_INTERVAL_MS[correct ? srcBox : (row.box === 0 ? 1 : row.box)];
   store.saveProgress(child.key, row);
   return row;
 }

@@ -85,9 +85,11 @@ export const L1 = [
   w(1, 'body', 'tummy', '🧍', { aliases: ['tumy', 'tommy'] }),
   w(1, 'body', 'feet', '🦶', { accepts: ['foot'] }),
 
-  // size (2)
+  // size (4)
   w(1, 'size', 'big', '🐳', { accepts: ['large'], aliases: ['bigg'] }),
   w(1, 'size', 'small', '🐜', { accepts: ['little'], aliases: ['smal'] }),
+  w(1, 'size', 'tall', '🦒', { accepts: ['high'], aliases: ['tal'] }),
+  w(1, 'size', 'short', '🦔', { aliases: ['shor'] }),
 ];
 
 // ── L2 · Little Sentences (~49 items + frames) ─────────────────────────────

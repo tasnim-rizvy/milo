@@ -316,7 +316,7 @@ export const LINES = {
   ],
   loveYouBounded: [
     'I love playing with you too! You\'re my favorite friend today. 💛',
-    'Aww! I love our games together. You\'re so kind! 🦊💛',
+    'Aww! I love playing our games together. You\'re so kind! 🦊💛',
     'That makes Milo\'s tail wag! I love playing with you. 🌟',
   ],
   keepPlayingLimit: [
@@ -378,10 +378,10 @@ export const LINES = {
     'Wow — {stars} stars today! You learned: {words} 🌟',
   ],
   cliffhanger: [
-    'Thank you for playing, {name}! Tomorrow… I found a JUNGLE 🌴 And I think something BIG lives in it!',
-    'Thank you, {name}! Tomorrow Milo has a surprise… a JUNGLE! 🌴 Something BIG is hiding there!',
-    'Great playing, {name}! Tomorrow: a jungle adventure 🌴 — I heard a BIG sound!',
-    'Bye-bye, {name}! Tomorrow we visit the jungle 🌴 and meet someone VERY big!',
+    'Bye-bye, {name}! 👋 Wave back! Tomorrow… I found a JUNGLE 🌴 And I think something BIG lives in it!',
+    'Thank you, {name}! Bye-bye! 👋 Tomorrow Milo has a surprise… a JUNGLE! 🌴 Something BIG is hiding there!',
+    'Great playing, {name}! Bye-bye — Milo waves! 👋 Tomorrow: a jungle adventure 🌴 — I heard a BIG sound!',
+    'Bye-bye, {name}! Milo is waving! 👋 Tomorrow we visit the jungle 🌴 and meet someone VERY big!',
   ],
   moodEnd: [
     'One last thing — how do you feel now?',

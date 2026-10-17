@@ -7,14 +7,15 @@ const RX = {
   stop: /(^|\s)(stop|stopp?it|no more|quit)(\s|$)|i (don'?t|dont|do not) want/,
   upset: /\b(sad|tired|scared|angry|mad|afraid|worried|lonely|hate|bad day|crying|cry)\b/,
   cant: /\b(i can'?t|i cant|too hard|so hard|difficult)\b/,
-  dontknow: /\b(i (don'?t|dont|do not) know|dunno|no idea|idk)\b/,
-  play: /\b(play|plays|game|games|sing|song|songs|dance|dancing|simon)\b/,
+  dontknow: /\b(i (don'?t?|do not) know|dunno|no idea|idk)\b/,
+  play: /\b(pla+y|plays|game|games|sing|song|songs|dance|dancing|simon)\b/,
   bored: /\b(bored|boring)\b/,
   love: /\b(i love you|love you milo)\b/,
   question: /\b(where|why|who|whose|how many|what is|what'?s|which)\b/,
   yes: /\b(yes|yeah|yep|yup|ok|okay|sure)\b/,
   no: /\b(no|nope|nah)\b/,
   hello: /\b(hi|hello|hey)\b/,
+  bye: /(^|\s)(bye|goodbye|byebye|see you)(\s|$)/,
 };
 
 // Words that signal a home-language attempt (one-line bridge max per session).
@@ -70,6 +71,7 @@ export function classifyInput(raw, ctx = {}) {
   if (isGibberish(raw)) return { kind: 'gibberish', mode: 'engagement' };
   if (RX.question.test(t)) return { kind: 'question', mode: 'conversation' }; // curiosity — grace 2–3 turns
   if (RX.hello.test(t) && t.split(' ').length <= 2) return { kind: 'hello', mode: 'conversation' };
+  if (RX.bye.test(t)) return { kind: 'bye', mode: null };
   return { kind: 'chat', mode: 'conversation' };
 }
 
