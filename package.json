@@ -1,0 +1,18 @@
+{
+  "name": "milo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Milo — an AI-powered English learning chatbot for children under 7. Deterministic curriculum engine + LLM warmth. Chat-first: tap or type, no microphone.",
+  "workspaces": ["server", "client"],
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "dev:server": "node --watch server/src/index.js",
+    "dev:client": "npm --workspace client run dev",
+    "build": "npm --workspace client run build",
+    "start": "node server/src/index.js",
+    "test": "npm --workspace server run test",
+    "e2e": "node tools/e2e.mjs",
+    "latency": "node tools/latency.mjs",
+    "requirements": "node tools/requirement-check.mjs"
+  }
+}

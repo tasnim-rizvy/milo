@@ -1,0 +1,122 @@
+// Fastify app: JSON/REST API + SSE chat stream + static client (one service,
+// one URL — docs/02 §4). LLM keys are optional; the ladder is
+// Gemini → Groq → scripted and every path is demoable.
+import Fastify from 'fastify';
+import fastifyStatic from '@fastify/static';
+import { existsSync } from 'node:fs';
+import { config, llmProviders } from './config.js';
+import { openStore } from './store.js';
+import { seedDemo } from './seed.js';
+import { createSession, handleInput } from './engine/session.js';
+import { levelStats } from './engine/curriculum.js';
+
+export async function buildApp(opts = {}) {
+  const app = Fastify({ logger: false, bodyLimit: 64 * 1024 });
+  const store = opts.store || openStore(opts.dbPath || config.dbPath);
+  if (!opts.noSeed) seedDemo(store);
+  app.decorate('miloStore', store);
+
+  app.addHook('onRequest', async (req, reply) => {
+    reply.header('access-control-allow-origin', '*');
+    reply.header('access-control-allow-headers', 'content-type');
+    reply.header('access-control-allow-methods', 'GET,POST,OPTIONS');
+    if (req.method === 'OPTIONS') return reply.code(204).send();
+  });
+
+  const summarizeChild = (c) => ({
+    key: c.key, nickname: c.nickname, avatar: c.avatar, level: c.level,
+    reading_band: c.reading_band, age_band: c.age_band, interests: c.interests,
+    home_language: c.home_language, last_summary: c.last_summary,
+  });
+
+  app.get('/api/health', async () => ({
+    ok: true,
+    service: 'milo',
+    llm: llmProviders().map((p) => p.name),
+    scriptedAlwaysOn: true,
+    time: new Date().toISOString(),
+  }));
+
+  app.get('/api/children', async () => ({ children: store.children().map(summarizeChild) }));
+
+  app.get('/api/progress/:key', async (req, reply) => {
+    const child = store.child(req.params.key);
+    if (!child) return reply.code(404).send({ error: 'no such child' });
+    return {
+      child: summarizeChild(child),
+      stats: levelStats(store, child),
+      progress: store.progressAll(child.key).map((p) => ({
+        item_id: p.item_id, box: p.box, correct: p.correct, wrong: p.wrong, next_due: p.next_due,
+      })),
+      badges: store.badges(child.key),
+      events: store.recentEvents(child.key, 25),
+    };
+  });
+
+  app.post('/api/reset-demo', async () => {
+    seedDemo(store, { force: true });
+    return { ok: true, children: store.children().map(summarizeChild) };
+  });
+
+  app.post('/api/session', async (req, reply) => {
+    const { childKey = 'maya', intent = 'learn' } = req.body || {};
+    const child = store.child(childKey);
+    if (!child) return reply.code(404).send({ error: 'no such child' });
+    const { id, turn } = createSession(store, child, intent);
+    return { sessionId: id, turn, child: summarizeChild(store.child(child.key)) };
+  });
+
+  // SSE: POST a child input, stream Milo's reply (chunk* → turn → end).
+  app.post('/api/message', async (req, reply) => {
+    const { sessionId, input } = req.body || {};
+    const sess = sessionId ? store.session(sessionId) : null;
+    const child = sess ? store.child(sess.child_key) : null;
+
+    reply.hijack();
+    const raw = reply.raw;
+    raw.writeHead(200, {
+      'content-type': 'text/event-stream; charset=utf-8',
+      'cache-control': 'no-cache, no-transform',
+      connection: 'keep-alive',
+      'x-accel-buffering': 'no',
+    });
+    const send = (event, data) => raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+
+    if (!sess || !child) {
+      send('turn', { messages: [{ say: 'Whoops! Milo lost track. Please start again! 🦊', mood: 'think' }], options: null, expect: null, effects: {} });
+      send('end', {});
+      raw.end();
+      return;
+    }
+
+    const t0 = performance.now();
+    try {
+      const onChunk = (text) => send('chunk', { text });
+      const turn = await handleInput(store, child, sessionId, input || { type: 'text', text: '' }, onChunk);
+      turn.latency = { serverMs: Math.round(performance.now() - t0) };
+      send('turn', turn);
+    } catch (err) {
+      send('turn', {
+        messages: [{ say: 'Oops! Milo tripped on his tail. Let\'s try that again! 🙈', mood: 'think' }],
+        options: null, expect: null, effects: {}, safety: 'ok', mode: 'learning',
+      });
+    }
+    send('end', {});
+    raw.end();
+  });
+
+  if (existsSync(config.clientDist)) {
+    await app.register(fastifyStatic, { root: config.clientDist, prefix: '/' });
+    app.setNotFoundHandler((req, reply) => {
+      if ((req.raw.url || '').startsWith('/api')) return reply.code(404).send({ error: 'not found' });
+      return reply.sendFile('index.html');
+    });
+  } else {
+    app.get('/', async () => ({
+      milo: 'API is up. Client build not found — run: npm run build',
+      health: '/api/health',
+    }));
+  }
+
+  return app;
+}
