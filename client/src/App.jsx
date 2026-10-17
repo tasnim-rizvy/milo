@@ -79,7 +79,20 @@ export default function App() {
     if (e.calm) sound.calm();
     setCalm(turn.mode === 'support' || !!e.calm);
     if (typeof latencyMs === 'number') setLatSamples((s) => [...s.slice(-29), latencyMs]);
-    if (devOn) setDev(turn.dev || null);
+    if (devOn) {
+      setDev(turn.dev || null);
+      // e2e/dev hook (docs/06 §5): what the engine expects this turn.
+      window.__milo = {
+        n: (window.__milo?.n || 0) + 1,
+        expect: turn.expect || null,
+        options: turn.options || null,
+        wordChips: turn.wordChips || null,
+        mode: turn.mode,
+        stars: turn.effects?.totalStars ?? 0,
+        endCard: !!turn.effects?.endCard,
+        msgs: (turn.messages || []).map((m) => m.say),
+      };
+    }
   }, [appendMilo, devOn]);
 
   const sendInput = useCallback(async (payload, echoText) => {
