@@ -1,6 +1,6 @@
 {
-  "base": "https://highlights-kept-bits-abs.trycloudflare.com",
-  "ranAt": "2026-10-17T20:48:01.369Z",
+  "base": "http://localhost:3002",
+  "ranAt": "2026-10-17T21:11:20.647Z",
   "checks": [
     {
       "id": "R1",
