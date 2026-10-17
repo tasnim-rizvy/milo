@@ -93,6 +93,7 @@ function turn(state, opts) {
       plan: state.plan ? { review: state.plan.review.length, teach: state.plan.teach.length } : null,
       counters: { ...state.counters },
       llm: !!opts.llm,
+      llmProvider: opts.llmProvider || null,
     },
   };
 }
@@ -1115,7 +1116,7 @@ async function conversationTurn(store, child, state, text, events, onChunk) {
         options: state.lastOptions.length ? state.lastOptions : null,
         expect: state.expect,
         lessonAction: 'retry',
-        llm: llm.usedLLM,
+        llm: llm.usedLLM, llmProvider: llm.provider || null,
         events,
       });
     }
@@ -1127,7 +1128,7 @@ async function conversationTurn(store, child, state, text, events, onChunk) {
       wordChips: built.chips,
       expect: built.expect,
       lessonAction: 'present',
-      llm: llm.usedLLM,
+      llm: llm.usedLLM, llmProvider: llm.provider || null,
       events,
     });
   }
@@ -1136,7 +1137,7 @@ async function conversationTurn(store, child, state, text, events, onChunk) {
     messages: [msg(llm.say, 'cheer'), msg(pick(LINES.conversationOpeners), 'happy')],
     expect: { type: 'free' },
     lessonAction: 'present',
-    llm: llm.usedLLM,
+    llm: llm.usedLLM, llmProvider: llm.provider || null,
     events,
   });
 }
@@ -1163,7 +1164,7 @@ async function handleSupportText(store, child, state, text, events, onChunk) {
     options: afterCalmActions(),
     expect: { type: 'action' },
     lessonAction: 'break',
-    llm: llm.usedLLM,
+    llm: llm.usedLLM, llmProvider: llm.provider || null,
     events,
   });
 }
