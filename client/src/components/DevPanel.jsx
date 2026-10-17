@@ -1,8 +1,19 @@
 import { useState } from 'react';
 
 export default function DevPanel({ dev, child, lat, onReset }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
+
+  // Collapsed by default: a small corner pill so the child UI (and the
+  // composer under it) stays clickable; tap 🛠 to expand.
+  if (!open) {
+    return (
+      <div className="devpanel devpanel-min">
+        <button className="dev-btn" onClick={() => setOpen(true)} aria-label="Open dev panel">🛠</button>
+      </div>
+    );
+  }
+
   return (
     <div className="devpanel">
       <div className="devpanel-head">
@@ -18,7 +29,7 @@ export default function DevPanel({ dev, child, lat, onReset }) {
         >
           {resetting ? '…' : 'Reset demo'}
         </button>
-        <button className="dev-btn" onClick={() => setOpen((o) => !o)}>{open ? '▾' : '▴'}</button>
+        <button className="dev-btn" onClick={() => setOpen(false)}>{'▾'}</button>
       </div>
       {open && (
         <pre>

@@ -373,6 +373,11 @@ button { -webkit-tap-highlight-color: transparent; }
   border-radius: 8px; padding: 2px 8px; font: inherit; cursor: pointer;
 }
 .devpanel pre { margin: 0; padding: 10px; max-height: 42vh; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+.devpanel-min {
+  width: auto; padding: 5px 7px;
+  background: rgba(28, 26, 34, 0.72);
+}
+.devpanel-min .dev-btn { border: 0; font-size: 17px; padding: 2px 6px; }
 
 /* ── Reduced motion & small screens ──────────────────────── */
 @media (prefers-reduced-motion: reduce) {
