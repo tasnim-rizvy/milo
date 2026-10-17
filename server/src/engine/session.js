@@ -62,6 +62,7 @@ function snapshot(state) {
     ended: state.ended,
     lastOptions: state.lastOptions,
     expect: state.expect,
+    recent: state.recent || [],
   };
 }
 
@@ -139,6 +140,7 @@ export function createSession(store, child, intent = 'learn') {
     moodEnd: null,
     lastOptions: [],
     expect: null,
+    recent: [],
     ended: false,
   };
 
@@ -1100,6 +1102,14 @@ export const CONVERSATION_PROMPTS = [
   'What did you do today?',
 ];
 
+// Model memory: keep the last few exchanges so Milo never repeats himself.
+function remember(state, childText, miloSay) {
+  const r = state.recent || (state.recent = []);
+  r.push({ role: 'child', text: String(childText).slice(0, 160) });
+  r.push({ role: 'milo', text: String(miloSay).slice(0, 200) });
+  while (r.length > 8) r.shift();
+}
+
 // ── Conversation mode (≤3 turns then bridge) ───────────────────────────────
 
 async function conversationTurn(store, child, state, text, events, onChunk) {
@@ -1108,9 +1118,10 @@ async function conversationTurn(store, child, state, text, events, onChunk) {
   state.sticky = 1;
 
   const llm = await composeFreeTurn(
-    { mode: 'conversation', child, store, input: text, scriptedFallback: pick(CHAT_SCRIPTED) },
+    { mode: 'conversation', child, store, input: text, history: (state.recent || []).slice(-6), scriptedFallback: pick(CHAT_SCRIPTED) },
     onChunk,
   );
+  remember(state, text, llm.say);
 
   const c = state.counters;
   const item = currentItem(state);
@@ -1163,12 +1174,14 @@ async function handleSupportText(store, child, state, text, events, onChunk) {
       child,
       store,
       input: text,
+      history: (state.recent || []).slice(-6),
       scriptedFallback: feeling
         ? pick(LINES.validateFeeling).replaceAll('{feeling}', feeling)
         : 'Thank you for telling me. That sounds like a lot. 💛',
     },
     onChunk,
   );
+  remember(state, text, llm.say);
   state.counters.tellMode = false;
   return turn(state, {
     messages: [msg(llm.say, 'care'), msg(pick(LINES.bravePraise), 'cheer'), msg(pick(LINES.afterCalmOffer), 'care')],

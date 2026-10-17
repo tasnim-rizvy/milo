@@ -10,6 +10,9 @@ import { itemsOf } from '../engine/bank.js';
 const SYSTEM = `You are Milo, a warm cartoon fox chatbot who teaches English to children under 7.
 Reply with ONE short message: max 2 sentences, max 12 words per sentence, concrete present-tense words, at most one question, emoji often.
 Vocabulary: only very simple words a 5-year-old knows. No idioms, no sarcasm, no metaphors, no scary/adult/toilet topics.
+Always react to what the child just said — answer their question first if they asked one.
+Never repeat your last question or topic: you can see the recent chat, so say something new.
+The child's "Loves" list is background — mention a like only now and then, not every reply.
 If the child is sad or upset: comfort first, no teaching at all.
 Never ask for or repeat personal information (full name, address, school, phone).
 Never mention parents or grown-ups. Never say "wrong".
@@ -39,22 +42,32 @@ export function buildLearnerCard(child, store) {
     `Reading band: ${child.reading_band === 'tap-first' ? 'cannot read yet — keep language ultra simple' : 'early reader — may type short words'}.`,
     mastered.length ? `Mastered words: ${mastered.join(', ')}.` : '',
     struggling.length ? `Struggling words: ${struggling.join(', ')}.` : '',
-    child.interests?.length ? `Loves: ${child.interests.join(', ')} — you may skin examples with these.` : '',
+    child.interests?.length ? `Loves: ${child.interests.join(', ')} — background only, bring these up rarely.` : '',
     child.home_language ? `Home language: ${child.home_language} (one tiny encouragement bridge max, never full translation).` : '',
     child.last_summary ? `Last session: ${child.last_summary}` : '',
   ].filter(Boolean).join('\n');
 }
 
+// Build the single user message: learner card + mode + recent chat + new line.
+export function buildChatPrompt({ card, mode, input, history = [] }) {
+  const modeLine = mode === 'support'
+    ? 'The child is upset or sharing feelings. Comfort first, zero teaching, gentle and short.'
+    : 'The child is chatting. Be curious and playful, keep it very short.';
+  const recent = history.length
+    ? `Recent chat (oldest first — never repeat your last line's topic or question):\n${history
+      .map((m) => `${m.role === 'milo' ? 'Milo' : 'Child'}: ${m.text}`)
+      .join('\n')}\n`
+    : '';
+  return `${card}\n\n${modeLine}\n${recent}Child said: "${String(input).slice(0, 200)}"`;
+}
+
 // Compose one free/LLM-backed line. onChunk(text) streams tokens to the client.
-export async function composeFreeTurn({ mode, child, store, input, scriptedFallback }, onChunk = null) {
+export async function composeFreeTurn({ mode, child, store, input, history = [], scriptedFallback }, onChunk = null) {
   const providers = llmProviders();
   if (!providers.length) return { say: scriptedFallback, usedLLM: false, ms: 0 };
 
   const card = buildLearnerCard(child, store);
-  const modeLine = mode === 'support'
-    ? 'The child is upset or sharing feelings. Comfort first, zero teaching, gentle and short.'
-    : 'The child is chatting. Be curious and playful, keep it very short.';
-  const user = `${card}\n\n${modeLine}\nChild said: "${String(input).slice(0, 200)}"`;
+  const user = buildChatPrompt({ card, mode, input, history });
 
   const started = Date.now();
   for (const provider of providers) {

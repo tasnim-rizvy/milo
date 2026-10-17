@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { openStore } from '../src/store.js';
 import { seedDemo } from '../src/seed.js';
-import { createSession, handleInput } from '../src/engine/session.js';
+import { createSession, handleInput, loadState } from '../src/engine/session.js';
 
 async function freshSession(store, key = 'maya', intent = 'learn') {
   const child = store.child(key);
@@ -74,6 +74,21 @@ test('long prose during a tap task never earns a silent star', async () => {
   const t = await handleInput(store, child, id, { type: 'text', text: 'i have a big red ball at home' });
   assert.equal(t.effects.starGain, 0, `prose must not be credited as an answer: ${say(t)}`);
   assert.equal(t.mode, 'conversation');
+});
+
+test('chat memory: recent exchanges are kept for the model (capped)', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  const child = store.child('maya');
+  const { id } = createSession(store, child, 'learn');
+  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'text', text: 'i like dinosaurs' });
+  await handleInput(store, child, id, { type: 'text', text: 'my dog is called Bruno' });
+  const st = loadState(store, id);
+  assert.ok(st.recent.length >= 4, 'both exchanges remembered');
+  assert.ok(st.recent.length <= 8, 'history stays capped');
+  assert.equal(st.recent[0].role, 'child');
+  assert.equal(st.recent[1].role, 'milo');
 });
 
 test('wrong chip → recast (never the word "wrong"); correct chip → star + praise', async () => {

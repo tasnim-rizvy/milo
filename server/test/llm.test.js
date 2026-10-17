@@ -31,3 +31,23 @@ test('no keys → empty ladder (scripted-only mode)', async () => {
   const { llmProviders } = await import('../src/config.js?scenario=nokeys');
   assert.deepEqual(llmProviders(), []);
 });
+
+// ── Prompt building ────────────────────────────────────────────────────────
+
+test('recent chat goes into the prompt so Milo can avoid repeating himself', async () => {
+  const { buildChatPrompt } = await import('../src/llm/compose.js');
+  const user = buildChatPrompt({
+    card: 'Child: Maya, level L1.',
+    mode: 'conversation',
+    input: 'i have a new toy car',
+    history: [
+      { role: 'child', text: 'i like dinosaurs' },
+      { role: 'milo', text: 'I like cats! Do you have a cat?' },
+    ],
+  });
+  assert.match(user, /Recent chat/);
+  assert.match(user, /Milo: I like cats! Do you have a cat\?/);
+  assert.match(user, /Child said: "i have a new toy car"/);
+  const none = buildChatPrompt({ card: 'c', mode: 'conversation', input: 'hi' });
+  assert.doesNotMatch(none, /Recent chat/);
+});
