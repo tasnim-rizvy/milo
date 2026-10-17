@@ -110,14 +110,20 @@ export function matchAnswer(input, item) {
     }
     // singular/plural: "apples" for "apple", "cat" for "cats"
     if (raw !== cand && pluralTolerant(raw, cand)) return { ok: true, kind: 'plural' };
-    // single word inside a sentence: "it is a red ball" counts for "red"
+    // single word inside a sentence: "it is a red ball" counts for "red".
+    // Inside prose keep it strict — exact, or a near-hit (≤1 edit, raw or
+    // phonetic). The full length-scaled budget would scrape random words out
+    // of long sentences ("i have a big red ball at home" → "hello").
     if (!cand.includes(' ') && cand.length >= 3) {
       for (const t of rawTokens) {
         if (t === cand) return { ok: true, kind: 'word-in-sentence' };
-        if (t.length >= 3 && levenshtein(t, cand) <= budgetFor(Math.max(t.length, cand.length)) && shortWordEditOk(t, cand)) {
+        if (
+          t.length >= 3 &&
+          Math.min(levenshtein(t, cand), levenshtein(phonetic(t), candPhon)) <= 1 &&
+          shortWordEditOk(t, cand)
+        ) {
           return { ok: true, kind: 'word-in-sentence' };
         }
-        if (t.length >= 4 && phonetic(t) === candPhon) return { ok: true, kind: 'word-in-sentence' };
       }
     }
   }

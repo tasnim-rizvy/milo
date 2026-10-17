@@ -64,6 +64,18 @@ test('free chat never stacks a second question in one turn', async () => {
   }
 });
 
+test('long prose during a tap task never earns a silent star', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  const child = store.child('maya');
+  const { id } = createSession(store, child, 'learn');
+  const mood = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  assert.equal(mood.expect.type, 'chip', 'a tap task is pending');
+  const t = await handleInput(store, child, id, { type: 'text', text: 'i have a big red ball at home' });
+  assert.equal(t.effects.starGain, 0, `prose must not be credited as an answer: ${say(t)}`);
+  assert.equal(t.mode, 'conversation');
+});
+
 test('wrong chip → recast (never the word "wrong"); correct chip → star + praise', async () => {
   const store = openStore(':memory:');
   seedDemo(store);

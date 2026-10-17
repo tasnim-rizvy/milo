@@ -38,6 +38,15 @@ test('word inside a sentence counts', () => {
   assert.equal(matchAnswer('My dino is fast!', { answer: 'fast' }).ok, true);
 });
 
+test('prose is not scraped for fuzzy matches (regression: "…at home" ≠ hello)', () => {
+  const hello = { answer: 'hello', aliases: ['helo', 'hallo'] };
+  assert.equal(matchAnswer('i have a big red ball at home', hello).ok, false);
+  assert.equal(matchAnswer('i have a big red ball at home', { answer: 'bye' }).ok, false);
+  // genuine in-sentence near-misses still count
+  assert.equal(matchAnswer('its my rad ball', { answer: 'red' }).ok, true);
+  assert.equal(matchAnswer('the wabbit hops', { answer: 'rabbit' }).ok, true);
+});
+
 test('digits for numbers, phrases for sentences', () => {
   assert.equal(matchAnswer('11', { answer: 'eleven', accepts: ['11'] }).ok, true);
   assert.equal(matchAnswer("I'm fine thank you", { answer: 'I am fine thank you' }).ok, true);
