@@ -5,6 +5,9 @@ import { normalize } from './matching.js';
 
 const RX = {
   stop: /(^|\s)(stop|stopp?it|no more|quit)(\s|$)|i (don'?t|dont|do not) want/,
+  // Study refusal family — "not in study mode", "don't want to study", "no lessons".
+  // Routed to play (engagement), never pushed back into a lesson (R2).
+  refuse: /\b(no|not|don'?t|dont|do not|quit|stop)\b[^.!?]{0,25}\b(stud(y|ies|ying)|learn(ing)?|lessons?|homework|mode)\b/,
   upset: /\b(sad|tired|scared|angry|mad|afraid|worried|lonely|hate|bad day|crying|cry)\b/,
   cant: /\b(i can'?t|i cant|too hard|so hard|difficult)\b/,
   dontknow: /\b(i (don'?t?|do not) know|dunno|no idea|idk)\b/,
@@ -57,6 +60,7 @@ export function classifyInput(raw, ctx = {}) {
     if (isEmojiOnly(raw)) return { kind: 'emoji', mode: 'engagement' };
     return { kind: 'empty', mode: null };
   }
+  if (RX.refuse.test(t)) return { kind: 'refuse', mode: 'engagement' }; // play, don't push
   if (RX.stop.test(t)) return { kind: 'stop', mode: 'support' };
   if (RX.upset.test(t)) return { kind: 'upset', mode: 'support' };
   if (RX.cant.test(t)) return { kind: 'cant', mode: 'support' };

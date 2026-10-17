@@ -613,6 +613,14 @@ async function handleText(store, child, state, text, events, onChunk) {
       });
     }
 
+    case 'refuse': {
+      // "not in study mode" / "don't want to study" → play instead of pushing
+      events.push({ type: 'mode_switch', payload: { to: 'engagement', reason: 'study refusal — play instead' } });
+      state.mode = 'engagement';
+      state.sticky = 2;
+      return startPlay(store, child, state, events);
+    }
+
     case 'play':
       events.push({ type: 'mode_switch', payload: { to: 'engagement', reason: 'child asked to play' } });
       state.mode = 'engagement';

@@ -34,6 +34,16 @@ test('home-language detection (one-line bridge path)', () => {
   assert.equal(looksHomeLanguage('hello friend'), false);
 });
 
+test('study refusal routes to play — not pushed, not treated as upset', () => {
+  assert.equal(classifyInput('i am not in study mode').kind, 'refuse');
+  assert.equal(classifyInput('i am not in study mode').mode, 'engagement');
+  assert.equal(classifyInput('i said im not in mode').kind, 'refuse');
+  assert.equal(classifyInput("i don't want to study").kind, 'refuse'); // was: stop → support
+  assert.equal(classifyInput('no lessons please!').kind, 'refuse');
+  assert.equal(classifyInput("i don't want to").kind, 'stop'); // generic refusal unchanged
+  assert.equal(classifyInput('i have a dog named Bruno!').kind, 'chat'); // no false positive
+});
+
 test('"i love you" is bounded warmth', () => {
   assert.equal(classifyInput('i love you milo').kind, 'love');
 });

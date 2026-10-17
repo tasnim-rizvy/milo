@@ -36,6 +36,18 @@ test('Maya: greeting → mood check-in → first chip task (chip-only path compl
   assert.ok(t2.expect, 'expect present for matching');
 });
 
+test('study refusal opens play mode (chips, no lesson push)', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  const child = store.child('maya');
+  const { id } = createSession(store, child, 'learn');
+  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  const t = await handleInput(store, child, id, { type: 'text', text: 'i am not in study mode' });
+  assert.equal(t.mode, 'engagement');
+  assert.ok(t.options && t.options.length >= 2, 'play offers tappable options');
+  assert.ok((t.events || []).some((e) => e.payload?.reason === 'study refusal — play instead'));
+});
+
 test('wrong chip → recast (never the word "wrong"); correct chip → star + praise', async () => {
   const store = openStore(':memory:');
   seedDemo(store);
