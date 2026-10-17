@@ -32,7 +32,7 @@
   {
     "name": "wrong chip → recast, never the word \"wrong\"",
     "pass": true,
-    "detail": "Nice try! hello is 👋 — but I asked for hi 👋. Find hi!"
+    "detail": "Ooh, SO close! That one is thank you 🙏. This is hi 👋. Tap "
   },
   {
     "name": "recast keeps the same question alive (retry)",
