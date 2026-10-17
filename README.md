@@ -27,6 +27,10 @@ analysis, architecture, learning design, UI/UX plan, user journeys, and the buil
 - **No API keys needed.** The engine ships with a scripted fast-path, so every feature works with
   zero configuration (`llm: []` in `/api/health`). Gemini/Groq keys, when present, only add warmth
   on top — the ladder falls back to scripted within a 1.2 s first-token budget.
+- **Want live generations instead of the scripted bank?** Paste one free key — `GEMINI_API_KEY`
+  (aistudio.google.com) and/or `GROQ_API_KEY` (console.groq.com), both card-free — into Render's
+  environment (or `.env` locally). Free-chat and feelings turns then stream from the model within
+  the budget above; teaching/chip turns stay instant and deterministic by design.
 
 ### 3-minute tour
 

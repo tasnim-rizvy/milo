@@ -10,6 +10,11 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
     autoDeploy: true
+    # Optional LLM warmth — free tiers, no credit card (docs/02 §5):
+    #   GEMINI_API_KEY — create at aistudio.google.com
+    #   GROQ_API_KEY   — create at console.groq.com
+    # Paste at deploy time or later in Dashboard → Environment. Without keys
+    # Milo runs fully scripted; /api/health lists whichever keys are on.
     envVars:
       - key: NODE_ENV
         value: production
