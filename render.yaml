@@ -1,0 +1,15 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+# Free plan: Docker web service, no credit card, spins down after idle
+# (first request after a nap takes ~30 s to wake).
+services:
+  - type: web
+    name: milo
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
