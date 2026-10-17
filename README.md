@@ -77,6 +77,7 @@ top; the < 2 s product budget still holds with a huge margin.
 ```bash
 git clone git@github.com:tasnim-rizvy/milo.git && cd milo
 npm install          # workspaces: server + client
+cp .env.example .env # optional: paste free GEMINI_API_KEY / GROQ_API_KEY inside
 npm run build        # builds the React client into client/dist
 npm start            # http://localhost:3001  (serves API + SSE + built client)
 ```
