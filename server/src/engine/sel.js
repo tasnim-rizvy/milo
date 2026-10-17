@@ -3,8 +3,16 @@
 // repeating itself. Corrections are recasts — the word "wrong" never appears.
 // No timers, no streaks-pressure, no "you lost". Stars are earned, never lost.
 
+// Avoid immediate repeats: Milo should not say the same line twice in a row.
+const lastPicked = new WeakMap();
 export function pick(pool, rng = Math.random) {
-  return pool[Math.floor(rng() * pool.length) % pool.length];
+  if (!pool?.length) return pool;
+  let idx = Math.floor(rng() * pool.length) % pool.length;
+  if (pool.length > 1 && pool[idx] === lastPicked.get(pool)) {
+    idx = (idx + 1 + Math.floor(rng() * (pool.length - 1))) % pool.length;
+  }
+  lastPicked.set(pool, pool[idx]);
+  return pool[idx];
 }
 
 export const LINES = {
