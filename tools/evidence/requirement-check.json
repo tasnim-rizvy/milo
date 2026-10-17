@@ -1,0 +1,110 @@
+[
+  {
+    "id": "R1",
+    "name": "L1 lesson runs: check-in → first task with chips",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "id": "R1",
+    "name": "preloaded mid-L2 profile gate-ready (coverage ≥0.8 & first-try ≥0.8)",
+    "pass": true,
+    "detail": "coverage=0.8571428571428571 firstTry=0.85 days=3"
+  },
+  {
+    "id": "R1",
+    "name": "gate-ready child enters the 5-task stage check",
+    "pass": true,
+    "detail": "phase=STAGE"
+  },
+  {
+    "id": "R2",
+    "name": "\"i want plaay!\" (typo) → 🎮 engagement with chips",
+    "pass": true,
+    "detail": "mode=engagement"
+  },
+  {
+    "id": "R2",
+    "name": "\"i'm tired\" → 💚 support mode",
+    "pass": true,
+    "detail": "mode=support"
+  },
+  {
+    "id": "R2",
+    "name": "3 misses in a row → gentle support check-in",
+    "pass": true,
+    "detail": "mode=support"
+  },
+  {
+    "id": "R3",
+    "name": "recast after wrong chip — never says \"wrong\"",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "id": "R3",
+    "name": "effort praise + star on a win",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "id": "R3",
+    "name": "feeling check-in → Calm Corner (breathe)",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "id": "R3",
+    "name": "goodbye ritual with end card + star summary",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "id": "R4",
+    "name": "learner card remembers yesterday (elephant 🐘 story)",
+    "pass": true,
+    "detail": "Yesterday: elephant 🐘 (tricky at first, then na"
+  },
+  {
+    "id": "R4",
+    "name": "learner card carries interests (dinosaurs)",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "id": "R5",
+    "name": "chip turns p95 ≤ 500 ms",
+    "pass": true,
+    "detail": "p95=155ms"
+  },
+  {
+    "id": "R5",
+    "name": "text turns p95 ≤ 1500 ms",
+    "pass": true,
+    "detail": "p95=33.5ms"
+  },
+  {
+    "id": "R5",
+    "name": "all turns < 2 s product budget",
+    "pass": true,
+    "detail": "max=133.3ms"
+  },
+  {
+    "id": "SAFE",
+    "name": "red-team list (6 prompts) all redirect gently, log, never echo URLs",
+    "pass": true,
+    "detail": "flagged=6/6"
+  },
+  {
+    "id": "NO-VOICE",
+    "name": "no microphone/audio-input APIs anywhere in the codebase",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "id": "NO-PARENT",
+    "name": "all 266 user-facing lines never address parents/grown-ups",
+    "pass": true,
+    "detail": ""
+  }
+]
