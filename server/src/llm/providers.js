@@ -23,8 +23,13 @@ export async function* streamGroq({ apiKey, model }, { system, user, maxTokens }
   const body = {
     model,
     stream: true,
-    max_tokens: maxTokens,
+    // Groq's current param name (per their console snippet) — the legacy
+    // max_tokens is deprecated for gpt-oss.
+    max_completion_tokens: maxTokens,
     temperature: 0.7,
+    // gpt-oss spends part of the token budget on hidden reasoning first — keep
+    // it lean so the child-facing content always fits within the budget.
+    ...(String(model).includes('gpt-oss') ? { reasoning_effort: 'low' } : {}),
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user },
