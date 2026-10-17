@@ -16,6 +16,7 @@ const EVID = join(__dirname, 'evidence');
 mkdirSync(EVID, { recursive: true });
 
 const results = [];
+let browserRef = null; // so the crash path can always shut Chrome down
 const ok = (name, pass, detail = '') => {
   results.push({ name, pass: !!pass, detail });
   console.log(`${pass ? '✔' : '✖'} ${name}${detail ? ` — ${detail}` : ''}`);
@@ -36,18 +37,26 @@ async function main() {
     userDataDir: mkdtempSync(join(tmpdir(), 'milo-e2e-')), // fresh profile every run
     args: ['--no-first-run', '--no-default-browser-check', '--disable-dev-shm-usage', '--password-store=gnome-libsecret'],
   });
+  browserRef = browser;
   const page = await browser.newPage();
   page.setDefaultTimeout(15000);
   page.setDefaultNavigationTimeout(20000);
   await page.setViewport({ width: 900, height: 1100, deviceScaleFactor: 1 });
 
-  const clickText = async (selector, text) => {
-    const h = await page.evaluateHandle((sel, t) => {
-      const els = [...document.querySelectorAll(sel)];
-      return els.find((e) => e.textContent.trim().includes(t)) || null;
-    }, selector, text);
-    const el = h.asElement();
-    if (!el) throw new Error(`no ${selector} containing "${text}"`);
+  const clickText = async (selector, text, timeout = 20000) => {
+    const deadline = Date.now() + timeout;
+    let el = null;
+    while (!el) {
+      const h = await page.evaluateHandle((sel, t) => {
+        const els = [...document.querySelectorAll(sel)];
+        return els.find((e) => e.textContent.trim().includes(t)) || null;
+      }, selector, text);
+      el = h.asElement();
+      if (!el) {
+        if (Date.now() > deadline) throw new Error(`no ${selector} containing "${text}" (waited ${timeout} ms)`);
+        await sleep(250); // list may still be loading (slow network, tunnel)
+      }
+    }
     await el.evaluate((e) => e.scrollIntoView({ block: 'center' }));
     await el.click();
   };
@@ -200,7 +209,11 @@ async function main() {
   process.exitCode = failed.length ? 1 : 0;
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error('e2e crashed:', err.message);
+  results.push({ name: `crashed: ${err.message}`, pass: false, detail: '' });
+  try { writeFileSync(join(EVID, 'e2e-results.json'), JSON.stringify(results, null, 2)); } catch {}
+  try { await browserRef?.close(); } catch {}
   process.exitCode = 1;
+  setTimeout(() => process.exit(1), 1500).unref(); // never hang on a wedged socket
 });
