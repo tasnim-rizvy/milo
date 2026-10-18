@@ -1,26 +1,36 @@
 // Fetch helpers + SSE stream reader (API contract: docs/02 §6).
+// A random id for this browser; profiles made here belong to it (no login).
+const deviceId = (() => {
+  try {
+    let d = localStorage.getItem('milo-device');
+    if (!d) { d = crypto.randomUUID(); localStorage.setItem('milo-device', d); }
+    return d;
+  } catch { return `mem-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`; }
+})();
+const H = (extra = {}) => ({ 'x-milo-device': deviceId, ...extra });
+
 const j = async (res) => {
   if (!res.ok) throw new Error(`http ${res.status}`);
   return res.json();
 };
 
-export const getChildren = () => fetch('/api/children').then(j);
+export const getChildren = () => fetch('/api/children', { headers: H() }).then(j);
 export const addChild = (profile) =>
   fetch('/api/children', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: H({ 'content-type': 'application/json' }),
     body: JSON.stringify(profile),
   }).then(j);
 export const removeChild = (key) =>
-  fetch(`/api/children/${encodeURIComponent(key)}`, { method: 'DELETE' }).then(j);
+  fetch(`/api/children/${encodeURIComponent(key)}`, { method: 'DELETE', headers: H() }).then(j);
 export const getHealth = () => fetch('/api/health').then(j);
-export const getProgress = (key) => fetch(`/api/progress/${encodeURIComponent(key)}`).then(j);
+export const getProgress = (key) => fetch(`/api/progress/${encodeURIComponent(key)}`, { headers: H() }).then(j);
 export const resetDemo = () => fetch('/api/reset-demo', { method: 'POST' }).then(j);
 
 export const startSession = (childKey, intent) =>
   fetch('/api/session', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: H({ 'content-type': 'application/json' }),
     body: JSON.stringify({ childKey, intent }),
   }).then(j);
 
@@ -31,7 +41,7 @@ export const startSession = (childKey, intent) =>
 export async function sendMessage(sessionId, input, { onChunk, onTurn } = {}) {
   const res = await fetch('/api/message', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: H({ 'content-type': 'application/json' }),
     body: JSON.stringify({ sessionId, input }),
   });
   if (!res.ok || !res.body) throw new Error(`http ${res.status}`);

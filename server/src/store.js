@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS children (
   first_try_correct INTEGER NOT NULL DEFAULT 0,
   first_try_total INTEGER NOT NULL DEFAULT 0,
   last_summary TEXT NOT NULL DEFAULT '',
-  last_seen INTEGER NOT NULL DEFAULT 0
+  last_seen INTEGER NOT NULL DEFAULT 0,
+  owner TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS item_progress (
   child_key TEXT NOT NULL,
@@ -71,14 +72,18 @@ export function openStore(path) {
   if (!childCols.includes('total_stars')) {
     db.exec('ALTER TABLE children ADD COLUMN total_stars INTEGER NOT NULL DEFAULT 0');
   }
+  // Migration: profiles belong to the device that created them ('' = shared demo fixture).
+  if (!childCols.includes('owner')) {
+    db.exec("ALTER TABLE children ADD COLUMN owner TEXT NOT NULL DEFAULT ''");
+  }
 
   const st = {
     childGet: db.prepare('SELECT * FROM children WHERE key = ?'),
     childAll: db.prepare('SELECT * FROM children ORDER BY created_at ASC'),
     childUpsert: db.prepare(`INSERT INTO children
         (key, nickname, age_band, reading_band, avatar, interests, home_language, level,
-         total_stars, created_at, first_try_correct, first_try_total, last_summary, last_seen)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         total_stars, created_at, first_try_correct, first_try_total, last_summary, last_seen, owner)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET
         nickname=excluded.nickname, age_band=excluded.age_band, reading_band=excluded.reading_band,
         avatar=excluded.avatar, interests=excluded.interests, home_language=excluded.home_language,
@@ -131,7 +136,7 @@ export function openStore(path) {
         JSON.stringify(c.interests || []), c.home_language || '', c.level,
         c.total_stars || 0,
         c.created_at || Date.now(), c.first_try_correct || 0, c.first_try_total || 0,
-        c.last_summary || '', c.last_seen || 0,
+        c.last_summary || '', c.last_seen || 0, c.owner || '',
       );
     },
     addStars(key, n) {

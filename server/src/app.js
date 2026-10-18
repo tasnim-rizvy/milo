@@ -30,6 +30,17 @@ export async function buildApp(opts = {}) {
     }
   });
 
+  // Profiles are private to the device that made them. The browser keeps a random
+  // device id and sends it as x-milo-device; '' owner = shared demo fixture.
+  const deviceOf = (req) => {
+    const d = String(req.headers['x-milo-device'] || '');
+    return /^[A-Za-z0-9-]{16,64}$/.test(d) ? d : '';
+  };
+  // Unowned rows are the shared demo fixtures — visible only when demo mode is on
+  // (older unowned profiles from before ownership existed stay hidden, never shared).
+  const demoOn = !!(opts.seed ?? config.seedDemo);
+  const canUse = (child, device) => !!child && ((child.owner === '' && demoOn) || (device !== '' && child.owner === device));
+
   const summarizeChild = (c) => ({
     key: c.key, nickname: c.nickname, avatar: c.avatar, level: c.level,
     reading_band: c.reading_band, age_band: c.age_band, interests: c.interests,
@@ -45,7 +56,10 @@ export async function buildApp(opts = {}) {
     time: new Date().toISOString(),
   }));
 
-  app.get('/api/children', async () => ({ children: store.children().map(summarizeChild) }));
+  app.get('/api/children', async (req) => {
+    const dev = deviceOf(req);
+    return { children: store.children().filter((c) => canUse(c, dev)).map(summarizeChild) };
+  });
 
   // Kid profiles (the parent corner): create / remove a kid. Per-word progress
   // rows are created lazily by the engine, so a fresh kid needs nothing else.
@@ -57,6 +71,8 @@ export async function buildApp(opts = {}) {
   // and the first level; from then on real progress (mastery gates) takes over.
   const INTERESTS = ['animals', 'dinosaurs', 'cars', 'space', 'music', 'drawing', 'cats', 'dogs', 'sports', 'robots'];
   app.post('/api/children', async (req, reply) => {
+    const dev = deviceOf(req);
+    if (!dev) return reply.code(400).send({ error: 'missing device id' });
     const body = req.body || {};
     const raw = String(body.nickname || '').replace(/\s+/g, ' ').trim();
     if (raw.length < 1 || raw.length > 16) {
@@ -76,7 +92,7 @@ export async function buildApp(opts = {}) {
       key, nickname: raw, age_band: age, reading_band: reads ? 'tap-and-type' : 'tap-first', avatar,
       interests, home_language: '', level: age >= 6 && reads ? 2 : 1, total_stars: 0,
       created_at: Date.now(), first_try_correct: 0, first_try_total: 0,
-      last_summary: '', last_seen: 0,
+      last_summary: '', last_seen: 0, owner: dev,
     };
     store.saveChild(child);
     return { ok: true, child: summarizeChild(child) };
@@ -84,14 +100,17 @@ export async function buildApp(opts = {}) {
 
   app.delete('/api/children/:key', async (req, reply) => {
     const key = req.params.key;
-    if (!store.child(key)) return reply.code(404).send({ error: 'no such child' });
+    const dev = deviceOf(req);
+    const kid = store.child(key);
+    // not yours (or a shared demo kid) looks exactly like "not found"
+    if (!kid || kid.owner === '' || kid.owner !== dev) return reply.code(404).send({ error: 'no such child' });
     store.deleteChild(key);
-    return { ok: true, children: store.children().map(summarizeChild) };
+    return { ok: true, children: store.children().filter((c) => canUse(c, dev)).map(summarizeChild) };
   });
 
   app.get('/api/progress/:key', async (req, reply) => {
     const child = store.child(req.params.key);
-    if (!child) return reply.code(404).send({ error: 'no such child' });
+    if (!canUse(child, deviceOf(req))) return reply.code(404).send({ error: 'no such child' });
     return {
       child: summarizeChild(child),
       stats: levelStats(store, child),
@@ -104,15 +123,15 @@ export async function buildApp(opts = {}) {
   });
 
   app.post('/api/reset-demo', async (req, reply) => {
-    if (!(opts.seed ?? config.seedDemo)) return reply.code(404).send({ error: 'demo mode is off' });
+    if (!demoOn) return reply.code(404).send({ error: 'demo mode is off' });
     seedDemo(store, { force: true });
-    return { ok: true, children: store.children().map(summarizeChild) };
+    return { ok: true, children: store.children().filter((c) => canUse(c, deviceOf(req))).map(summarizeChild) };
   });
 
   app.post('/api/session', async (req, reply) => {
     const { childKey = 'maya', intent = 'learn' } = req.body || {};
     const child = store.child(childKey);
-    if (!child) return reply.code(404).send({ error: 'no such child' });
+    if (!canUse(child, deviceOf(req))) return reply.code(404).send({ error: 'no such child' });
     const { id, turn } = createSession(store, child, intent);
     // AI-warm the very first line (greeting or calm-corner opener). The scripted
     // line is already in place as the fallback — a slow model never delays the
@@ -139,6 +158,7 @@ export async function buildApp(opts = {}) {
     const { sessionId, input } = req.body || {};
     const sess = sessionId ? store.session(sessionId) : null;
     const child = sess ? store.child(sess.child_key) : null;
+    if (child && !canUse(child, deviceOf(req))) return reply.code(404).send({ error: 'no such session' });
 
     reply.hijack();
     const raw = reply.raw;

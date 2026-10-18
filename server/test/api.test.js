@@ -81,8 +81,9 @@ test('progress endpoint exposes dev-panel data', async (t) => {
 test('kid profiles: create, unique keys, validation, delete', async (t) => {
   const { app, base } = await start();
   t.after(() => app.close());
+  const DEV = 'device-aaaaaaaaaaaaaaaa';
   const post = (body) => fetch(`${base}/api/children`, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-milo-device': DEV }, body: JSON.stringify(body),
   });
 
   const a = await (await post({ nickname: 'Zoe', age: 5, avatar: '🐰' })).json();
@@ -102,22 +103,23 @@ test('kid profiles: create, unique keys, validation, delete', async (t) => {
   assert.equal((await post({ nickname: '   ', age: 4 })).status, 400);
   assert.equal((await post({ nickname: 'x'.repeat(17), age: 4 })).status, 400);
 
-  const del = await fetch(`${base}/api/children/kid-zoe-2`, { method: 'DELETE' });
+  const del = await fetch(`${base}/api/children/kid-zoe-2`, { method: 'DELETE', headers: { 'x-milo-device': DEV } });
   assert.equal(del.status, 200);
-  assert.equal((await fetch(`${base}/api/children/nope`, { method: 'DELETE' })).status, 404);
+  assert.equal((await fetch(`${base}/api/children/nope`, { method: 'DELETE', headers: { 'x-milo-device': DEV } })).status, 404);
 
-  const { children } = await (await fetch(`${base}/api/children`)).json();
-  for (const c of children) {
-    assert.equal((await fetch(`${base}/api/children/${c.key}`, { method: 'DELETE' })).status, 200);
+  const mine = await (await fetch(`${base}/api/children`, { headers: { 'x-milo-device': DEV } })).json();
+  for (const c of mine.children.filter((c) => c.key.startsWith('kid-'))) {
+    assert.equal((await fetch(`${base}/api/children/${c.key}`, { method: 'DELETE', headers: { 'x-milo-device': DEV } })).status, 200);
   }
-  assert.deepEqual((await (await fetch(`${base}/api/children`)).json()).children, []);
+  const left = await (await fetch(`${base}/api/children`, { headers: { 'x-milo-device': DEV } })).json();
+  assert.deepEqual(left.children.filter((c) => c.key.startsWith('kid-')), []);
 });
 
 test('cross-origin writes are refused; same-origin writes pass; no CORS headers', async (t) => {
   const { app, base } = await start();
   t.after(() => app.close());
   const body = JSON.stringify({ nickname: 'Eve', age: 4 });
-  const h = { 'content-type': 'application/json' };
+  const h = { 'content-type': 'application/json', 'x-milo-device': 'device-bbbbbbbbbbbbbbbb' };
   const evil = await fetch(`${base}/api/children`, { method: 'POST', headers: { ...h, origin: 'https://evil.example' }, body });
   assert.equal(evil.status, 403);
   const del = await fetch(`${base}/api/children/maya`, { method: 'DELETE', headers: { origin: 'https://evil.example' } });
@@ -125,4 +127,36 @@ test('cross-origin writes are refused; same-origin writes pass; no CORS headers'
   const ok = await fetch(`${base}/api/children`, { method: 'POST', headers: { ...h, origin: base }, body });
   assert.equal(ok.status, 200);
   assert.equal(ok.headers.get('access-control-allow-origin'), null);
+});
+
+test('profiles are private to their device (list, play, progress, delete); demo kids are shared but undeletable', async (t) => {
+  const { app, base } = await start();
+  t.after(() => app.close());
+  const A = { 'x-milo-device': 'device-aaaaaaaaaaaaaaaa' };
+  const B = { 'x-milo-device': 'device-bbbbbbbbbbbbbbbb' };
+  const json = { 'content-type': 'application/json' };
+
+  // no device id → cannot create
+  assert.equal((await fetch(`${base}/api/children`, { method: 'POST', headers: json, body: JSON.stringify({ nickname: 'Ann', age: 4 }) })).status, 400);
+
+  const ann = (await (await fetch(`${base}/api/children`, { method: 'POST', headers: { ...json, ...A }, body: JSON.stringify({ nickname: 'Ann', age: 4 }) })).json()).child;
+  const keysFor = async (h) => (await (await fetch(`${base}/api/children`, { headers: h })).json()).children.map((c) => c.key);
+
+  assert.ok((await keysFor(A)).includes(ann.key));
+  assert.ok(!(await keysFor(B)).includes(ann.key));
+  assert.ok(!(await keysFor({})).includes(ann.key));
+  // device B cannot reach her progress, start her session, or delete her
+  assert.equal((await fetch(`${base}/api/progress/${ann.key}`, { headers: B })).status, 404);
+  assert.equal((await fetch(`${base}/api/session`, { method: 'POST', headers: { ...json, ...B }, body: JSON.stringify({ childKey: ann.key, intent: 'learn' }) })).status, 404);
+  assert.equal((await fetch(`${base}/api/children/${ann.key}`, { method: 'DELETE', headers: B })).status, 404);
+  assert.ok((await keysFor(A)).includes(ann.key));
+  // …and a session started by A cannot be driven from B
+  const sess = await (await fetch(`${base}/api/session`, { method: 'POST', headers: { ...json, ...A }, body: JSON.stringify({ childKey: ann.key, intent: 'learn' }) })).json();
+  const stolen = await fetch(`${base}/api/message`, { method: 'POST', headers: { ...json, ...B }, body: JSON.stringify({ sessionId: sess.sessionId, input: { type: 'text', text: 'hi' } }) });
+  assert.equal(stolen.status, 404);
+
+  // shared demo fixtures: visible to everyone, never deletable
+  assert.ok((await keysFor(B)).includes('maya'));
+  assert.equal((await fetch(`${base}/api/children/maya`, { method: 'DELETE', headers: B })).status, 404);
+  assert.equal((await fetch(`${base}/api/children/${ann.key}`, { method: 'DELETE', headers: A })).status, 200);
 });
