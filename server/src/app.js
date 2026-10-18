@@ -144,7 +144,12 @@ export async function buildApp(opts = {}) {
     if (turn.messages?.length) {
       const task = intent === 'calm'
         ? { type: 'calm' }
-        : { type: 'greeting', name: child.nickname, missed: !!opener?.missed, ...(opener?.tail ? { endWith: opener.tail } : {}) };
+        : {
+          type: 'greeting', name: child.nickname, missed: !!opener?.missed,
+          // about 1 hello in 3 nods to ONE thing the child loves (never a list)
+          ...(child.interests?.length && Math.random() < 0.35 ? { nod: child.interests[Math.floor(Math.random() * child.interests.length)] } : {}),
+          ...(opener?.tail ? { endWith: opener.tail } : {}),
+        };
       const llm = await composeFreeTurn({
         task, child, store, input: '', history: [],
         scriptedFallback: turn.messages[0].say,

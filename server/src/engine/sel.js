@@ -473,7 +473,40 @@ export const WONDERS = [
   { id: 'kick', tags: ['sports'], q: 'What do we KICK?', a: { emoji: '⚽', label: 'ball' }, b: { emoji: '🍎', label: 'apple' }, answer: 'a', fact: 'We kick a ball. Goal!' },
   { id: 'draw', tags: ['drawing'], q: 'What do we DRAW with?', a: { emoji: '✏️', label: 'pencil' }, b: { emoji: '🍌', label: 'banana' }, answer: 'a', fact: 'We draw with a pencil. Scribble, scribble!' },
   { id: 'meow', tags: ['cats'], q: 'Who says MEOW?', a: { emoji: '🐱', label: 'cat' }, b: { emoji: '🐶', label: 'dog' }, answer: 'a', fact: 'A cat says meow!' },
+  { id: 'sunday', tags: ['space'], q: 'What shines in the DAY?', a: { emoji: '☀️', label: 'sun' }, b: { emoji: '🌙', label: 'moon' }, answer: 'a', fact: 'The sun shines in the day. Hello, sun!' },
+  { id: 'wheels', tags: ['cars'], q: 'What has WHEELS?', a: { emoji: '🚗', label: 'car' }, b: { emoji: '🐟', label: 'fish' }, answer: 'a', fact: 'A car has wheels. They go round and round!' },
+  { id: 'beep', tags: ['cars'], q: 'What goes BEEP BEEP?', a: { emoji: '🚕', label: 'taxi' }, b: { emoji: '🐑', label: 'sheep' }, answer: 'a', fact: 'A car goes beep, beep! A sheep says baa.' },
+  { id: 'robot', tags: ['robots'], q: 'Who goes BEEP BOOP?', a: { emoji: '🤖', label: 'robot' }, b: { emoji: '🐰', label: 'bunny' }, answer: 'a', fact: 'A robot goes beep boop! A bunny hops.' },
+  { id: 'red', tags: ['drawing'], q: 'Which one is RED?', a: { emoji: '🍎', label: 'apple' }, b: { emoji: '🍌', label: 'banana' }, answer: 'a', fact: 'An apple can be red. A banana is yellow!' },
+  { id: 'boom', tags: ['music'], q: 'What goes BOOM BOOM?', a: { emoji: '🥁', label: 'drum' }, b: { emoji: '🍞', label: 'bread' }, answer: 'a', fact: 'A drum goes boom, boom!' },
+  { id: 'throw', tags: ['sports'], q: 'What do we THROW and catch?', a: { emoji: '🏀', label: 'ball' }, b: { emoji: '🪑', label: 'chair' }, answer: 'a', fact: 'We throw and catch a ball. Nice catch!' },
+  { id: 'huge', tags: ['dinosaurs'], q: 'Who is HUGE?', a: { emoji: '🦕', label: 'long-neck dinosaur' }, b: { emoji: '🐜', label: 'ant' }, answer: 'a', fact: 'Some dinosaurs were huge, with long, long necks!' },
+  { id: 'purr', tags: ['cats'], q: 'Who goes PURR?', a: { emoji: '🐱', label: 'cat' }, b: { emoji: '🐠', label: 'fish' }, answer: 'a', fact: 'A cat goes purr, purr when it is happy!' },
+  { id: 'fetch', tags: ['dogs'], q: 'Who loves to FETCH a stick?', a: { emoji: '🐶', label: 'dog' }, b: { emoji: '🐟', label: 'fish' }, answer: 'a', fact: 'A dog loves to fetch a stick. Run, run!' },
   { id: 'woof', tags: ['dogs'], q: 'Who says WOOF?', a: { emoji: '🐶', label: 'dog' }, b: { emoji: '🐱', label: 'cat' }, answer: 'a', fact: 'A dog says woof!' },
 ];
 export const WONDER_RIGHT = ['Yes!', 'You got it!', 'Great pick!', 'Ooh, nice one!'];
 export const WONDER_TRY = ['Good guess!', 'Fun pick!', 'Ooh, I like that one!'];
+
+// What the child told us they love shapes the chat. These scripted lines are the
+// safety-net twin of the AI's interest-aware replies (the AI gets the same list in
+// its learner card): each one is a tiny, concrete question or invitation.
+export const INTEREST_CHAT = {
+  animals: ['Which animal is your favorite? 🐾', 'If you had a pet, which animal would it be? 🐶', 'Can you do an animal sound for me? 🐮'],
+  dinosaurs: ['Roar! 🦖 Which dinosaur is your favorite?', 'If you met a dinosaur, what would you say? 🦕', 'Can you stomp like a dinosaur? Stomp, stomp! 🦖'],
+  cars: ['Vroom! 🚗 What color is your favorite car?', 'Beep beep! Where would you drive a car? 🛣️', 'Can you make a car sound? Vroom, vroom! 🏎️'],
+  space: ['Which do you like best: the moon or the stars? 🌙', 'If you flew a rocket, where would you go? 🚀', 'Three, two, one… blast off! 🚀 Where to?'],
+  music: ['Do you like to sing? What is your favorite song? 🎵', 'Can you clap a rhythm for me? Clap, clap! 👏', 'Which sound do you like: a drum or a guitar? 🥁'],
+  drawing: ['What is your favorite color to draw with? 🎨', 'If you drew a picture right now, what would it be? ✏️', 'I love pictures! What shape is your favorite? ⭐'],
+  cats: ['Meow! 🐱 What color is your favorite cat?', 'Do you like it when a cat goes purr, purr? 😺', 'If you had a cat, what would you name it? 🐈'],
+  dogs: ['Woof! 🐶 What would you name your dog?', 'Do you like to throw a ball for a dog? 🎾', 'Can you bark like a puppy? Woof, woof! 🐕'],
+  sports: ['Which game do you like: kicking, running, or jumping? ⚽', 'Can you jump three times? One, two, three! 🏃', 'What is your favorite game to play outside? 🌳'],
+  robots: ['Beep boop! 🤖 What would your robot do?', 'If you had a robot friend, what would you name it? 🤖', 'Can you talk like a robot? Beep boop! 🔧'],
+};
+
+// A scripted chat line: tied to something the child loves when we know it.
+export function chatLine(child, rng = Math.random) {
+  const mine = (child?.interests || []).filter((i) => INTEREST_CHAT[i]);
+  if (mine.length && rng() < 0.7) return pick(INTEREST_CHAT[pick(mine, rng)], rng);
+  return pick(CHAT_SCRIPTED, rng);
+}

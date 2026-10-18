@@ -8,7 +8,7 @@
 import { matchAnswer, containsAny, normalize } from './matching.js';
 import { classifySafety, SAFETY_REDIRECTS } from './safety.js';
 import { classifyInput, nextMode } from './modes.js';
-import { LINES, CHAT_SCRIPTED, MOOD_STYLES, WONDERS, WONDER_INTROS, WONDER_RIGHT, WONDER_TRY, pick } from './sel.js';
+import { LINES, CHAT_SCRIPTED, chatLine, MOOD_STYLES, WONDERS, WONDER_INTROS, WONDER_RIGHT, WONDER_TRY, pick } from './sel.js';
 import {
   applyAnswer, buildPlan, buildStageCheck, chipOptions, gateReady,
   itemById, itemsOfTheme, stageCheckVerdict, weakestItems,
@@ -157,7 +157,7 @@ function chooseOpener(store, child, deterministic, force = '') {
     const seen = store.recentEvents(child.key, 60).filter((e) => e.type === 'wonder_shown').map((e) => e.payload?.id);
     const fresh = WONDERS.filter((w) => w.id !== seen[0]);
     const liked = fresh.filter((w) => w.tags.some((t) => (child.interests || []).includes(t)));
-    return { kind: 'wonder', wonder: pick(liked.length && Math.random() < 0.6 ? liked : fresh) };
+    return { kind: 'wonder', wonder: pick(liked.length && Math.random() < 0.85 ? liked : fresh) };
   }
   return { kind: 'mood', style: pick(MOOD_STYLES) };
 }
@@ -1380,7 +1380,7 @@ async function conversationTurn(store, child, state, text, events, onChunk) {
   state.sticky = 1;
 
   const llm = await composeFreeTurn(
-    { mode: 'conversation', child, store, input: text, history: (state.recent || []).slice(-6), scriptedFallback: pick(CHAT_SCRIPTED) },
+    { mode: 'conversation', child, store, input: text, history: (state.recent || []).slice(-6), scriptedFallback: chatLine(child) },
     onChunk,
   );
   remember(state, text, llm.say);

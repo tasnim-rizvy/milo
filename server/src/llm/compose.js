@@ -13,7 +13,7 @@ Reply with ONE short message: max 2 sentences, max 12 words per sentence, concre
 Vocabulary: only very simple words a 5-year-old knows. No idioms, no sarcasm, no metaphors, no scary/adult/toilet topics.
 Always react to what the child just said — answer their question first if they asked one.
 Never repeat your last question or topic: you can see the recent chat, so say something new.
-The child's "Loves" list is background — mention a like only now and then, not every reply.
+Only talk about what the child loves when this message's note says so; otherwise stay on what the child said.
 If the child is sad or upset: comfort first, no teaching at all.
 Never ask for or repeat personal information (full name, address, school, phone).
 Never mention parents or grown-ups. Never say "wrong".
@@ -22,7 +22,7 @@ Never say you feel sad or happy about the child's feelings — say you are sorry
 If you are not sure what the child meant, ask ONE simple question with two choices — never guess that they are sleepy, sad, or playing.
 If the child says they do not want to study or learn, cheerfully offer a quick game instead.
 You may be playful, curious, and forgetful (kids like helping you).
-Vary the shape of your replies: sometimes a tiny fun fact, a silly idea, a guess ("do you think…?"), a "what if", or a question — never the same shape twice in a row, and never start with the same words as your last line.
+Vary the shape of your replies: sometimes a very well-known tiny fact, a silly idea, a guess ("do you think…?"), a "what if", or a question — never the same shape twice in a row, and never start with the same words as your last line.
 When the child asks "why" or "what", answer in one simple sentence and add one tiny wow fact.
 Facts: only share very well-known, certainly-true things, in plain words — never numbers, statistics, records or exact speeds. If you are not sure it is true, do not say it.
 End with a tiny invitation only when it fits — a statement is fine too.
@@ -31,7 +31,9 @@ Output plain text only — no quotes, no markdown.`;
 // Exported for tests: the hard prompt rules are part of the safety story.
 export const SYSTEM_PROMPT = SYSTEM;
 
-export function buildLearnerCard(child, store) {
+// `loves` is opt-in: the interests only reach the model on replies the code chose to
+// nudge (otherwise it would turn every line into a dinosaur line).
+export function buildLearnerCard(child, store, { loves = false } = {}) {
   const pm = new Map(store.progressAll(child.key).map((p) => [p.item_id, p]));
   const items = itemsOf(child.level);
   const mastered = items
@@ -51,7 +53,7 @@ export function buildLearnerCard(child, store) {
     `Reading band: ${child.reading_band === 'tap-first' ? 'cannot read yet — keep language ultra simple' : 'early reader — may type short words'}.`,
     mastered.length ? `Mastered words: ${mastered.join(', ')}.` : '',
     struggling.length ? `Struggling words: ${struggling.join(', ')}.` : '',
-    child.interests?.length ? `Loves: ${child.interests.join(', ')} — background only, bring these up rarely.` : '',
+    loves && child.interests?.length ? `Loves: ${child.interests.join(', ')}.` : '',
     child.home_language ? `Home language: ${child.home_language} (one tiny encouragement bridge max, never full translation).` : '',
     child.last_summary ? `Last session: ${child.last_summary}` : '',
   ].filter(Boolean).join('\n');
@@ -101,7 +103,7 @@ function taskDirective(task) {
     case 'mood':
       return `Right now: the check-in chips are on screen and the child tapped "I feel ${task.moodLabel}". Mirror that feeling warmly${task.mood === 'sad' ? '; gently remind them they can talk to you, take a breathing break, or play something soft — those are the buttons below' : ' and say you will start right away'}. No question — one short message, the buttons come next.`;
     case 'greeting':
-      return `Right now: a brand-new session starts. Greet ${task.name} warmly in one short, cheerful phrase (a different way each time).${task.missed ? ' Welcome them back — it has been a little while and you missed them.' : ''} One short message.`;
+      return `Right now: a brand-new session starts. Greet ${task.name} warmly in one short, cheerful phrase (a different way each time).${task.nod ? ` Add one tiny, playful nod to ONE thing they love (${task.nod}) — never list their likes, never say "I know you love".` : ' Do not mention what they love.'}${task.missed ? ' Welcome them back — it has been a little while and you missed them.' : ''} One short message.`;
     case 'wonder':
       return `Right now: you asked the child "${task.question}" with two picture choices and they tapped "${task.picked}". ${task.right ? 'That was the answer.' : 'The other picture was the answer, but this is a lovely pick.'} The true fact: ${task.fact} React warmly and share the fact in very simple words, like a tiny wow. Celebrate the fact only — never say "not" about the other picture, never correct the child, never say "wrong". No question — the next thing pops up right after.`;
     case 'scaffold': {
@@ -123,7 +125,7 @@ function taskDirective(task) {
 }
 
 // Build the single user message: learner card + brief/mode + recent chat + new line.
-export function buildChatPrompt({ card, mode, input, history = [], task = null }) {
+export function buildChatPrompt({ card, mode, input, history = [], task = null, interest = null }) {
   const lines = [card];
   const directive = task ? taskDirective(task) : '';
   if (directive) {
@@ -131,7 +133,10 @@ export function buildChatPrompt({ card, mode, input, history = [], task = null }
   } else {
     lines.push(mode === 'support'
       ? 'The child is upset or sharing feelings. Comfort first, zero teaching, gentle and short. Do not suggest games or activities — the next buttons offer breathe, talk, or bye. At most one gentle question about their feeling.'
-      : 'The child is chatting. Be curious and playful, keep it very short. React to what they said, then add something new: a tiny well-known fact (no numbers), a silly idea, or a fun "what if" — do not always ask a question.');
+      : 'The child is chatting. Be curious and playful, keep it very short. React to what they said, then add something new: a silly idea or a fun "what if" (a fact only if it is very well known) — do not always ask a question.');
+  }
+  if (!directive && mode !== 'support' && interest) {
+    lines.push(`Note for this reply: after reacting to what the child said, tie ONE tiny thing to their love of ${interest} — a silly idea or a wonder question. Only if it makes sense; do not force it.`);
   }
   if (history.length) {
     lines.push(`Recent chat (oldest first — never repeat your last line's topic or question):\n${history
@@ -216,8 +221,10 @@ export async function composeFreeTurn({ mode, task = null, child, store, input, 
   const providers = llmProviders();
   if (!providers.length) return { say: scriptedFallback, usedLLM: false, ms: 0, reason: 'no-keys' };
 
-  const card = buildLearnerCard(child, store);
-  const user = buildChatPrompt({ card, mode, input, history, task });
+  const interest = mode === 'conversation' && child.interests?.length && Math.random() < 0.4
+    ? child.interests[Math.floor(Math.random() * child.interests.length)] : null;
+  const card = buildLearnerCard(child, store, { loves: !!interest || !!task?.nod });
+  const user = buildChatPrompt({ card, mode, input, history, task, interest });
 
   const started = Date.now();
   let lastError = '';
