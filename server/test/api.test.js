@@ -4,7 +4,7 @@ import { buildApp } from '../src/app.js';
 import { openStore } from '../src/store.js';
 
 async function start() {
-  const app = await buildApp({ store: openStore(':memory:') });
+  const app = await buildApp({ store: openStore(':memory:'), seed: true });
   await app.listen({ port: 0, host: '127.0.0.1' });
   const base = `http://127.0.0.1:${app.server.address().port}`;
   return { app, base };
@@ -78,7 +78,7 @@ test('progress endpoint exposes dev-panel data', async (t) => {
   assert.ok(p.badges.length >= 1);
 });
 
-test('kid profiles: create, unique keys, validation, delete (never the last)', async (t) => {
+test('kid profiles: create, unique keys, validation, delete', async (t) => {
   const { app, base } = await start();
   t.after(() => app.close());
   const post = (body) => fetch(`${base}/api/children`, {
@@ -107,10 +107,10 @@ test('kid profiles: create, unique keys, validation, delete (never the last)', a
   assert.equal((await fetch(`${base}/api/children/nope`, { method: 'DELETE' })).status, 404);
 
   const { children } = await (await fetch(`${base}/api/children`)).json();
-  for (const c of children.filter((c) => c.key !== 'kid-zoe')) {
-    await fetch(`${base}/api/children/${c.key}`, { method: 'DELETE' });
+  for (const c of children) {
+    assert.equal((await fetch(`${base}/api/children/${c.key}`, { method: 'DELETE' })).status, 200);
   }
-  assert.equal((await fetch(`${base}/api/children/kid-zoe`, { method: 'DELETE' })).status, 400);
+  assert.deepEqual((await (await fetch(`${base}/api/children`)).json()).children, []);
 });
 
 test('cross-origin writes are refused; same-origin writes pass; no CORS headers', async (t) => {

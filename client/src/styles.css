@@ -462,3 +462,5 @@ button { -webkit-tap-highlight-color: transparent; }
   margin-top: 4px; border: 3px dashed var(--orange); background: #FFF8F0; border-radius: 999px;
   padding: 8px 18px; font-weight: 800; cursor: pointer; font-family: 'Nunito', sans-serif; font-size: 15px;
 }
+
+.welcome-form { width: 100%; max-width: 460px; background: #fff; border-radius: 24px; padding: 16px; text-align: left; }

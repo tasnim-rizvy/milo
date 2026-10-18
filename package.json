@@ -15,6 +15,7 @@
     "dev:client": "npm --workspace client run dev",
     "build": "npm --workspace client run build",
     "start": "node --env-file-if-exists=.env server/src/index.js",
+    "start:demo": "MILO_DEMO=1 DB_PATH=server/data/demo.db node --env-file-if-exists=.env server/src/index.js",
     "test": "npm --workspace server run test",
     "e2e": "node tools/e2e.mjs",
     "latency": "node tools/latency.mjs",

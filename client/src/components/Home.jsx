@@ -1,3 +1,5 @@
+import ProfileForm from './ProfileForm.jsx';
+
 const TILES = [
   { intent: 'learn', emoji: '🎓', label: 'Learn', sub: 'Words & games', cls: 'tile-learn' },
   { intent: 'talk', emoji: '💬', label: 'Talk', sub: 'Chat with Milo', cls: 'tile-talk' },
@@ -5,7 +7,7 @@ const TILES = [
   { intent: 'calm', emoji: '🫧', label: 'Calm', sub: 'Quiet corner', cls: 'tile-calm' },
 ];
 
-export default function Home({ child, childKey, childrenList, onStart, onSwitch, onStickers, onProfiles, onNewKid, muted, onToggleMute }) {
+export default function Home({ child, childKey, childrenList, onStart, onSwitch, onStickers, onProfiles, onCreate, ready, muted, onToggleMute }) {
   const name = child?.nickname || 'friend';
   return (
     <div className="home-wrap">
@@ -17,6 +19,20 @@ export default function Home({ child, childKey, childrenList, onStart, onSwitch,
           </button>
         </div>
       </header>
+      {!child ? (
+        <main className="home">
+          <div className="mascot" aria-hidden="true">🦊</div>
+          {ready ? (
+            <>
+              <div>
+                <div className="hello-card">Hi, I'm Milo!</div>
+                <div className="hello-sub">Tell me about you, so I can pick the right words.</div>
+              </div>
+              <div className="welcome-form"><ProfileForm onSubmit={onCreate} /></div>
+            </>
+          ) : null}
+        </main>
+      ) : (
       <main className="home">
         <div className="mascot" aria-hidden="true">🦊</div>
         <div>
@@ -39,23 +55,9 @@ export default function Home({ child, childKey, childrenList, onStart, onSwitch,
             {child?.total_stars > 0 ? <span className="stars-tag">⭐ {child.total_stars}</span> : null}
           </button>
         </div>
-        {childrenList && childrenList.length > 1 && (
-          <div className="switcher">
-            <span>Playing as:</span>
-            {childrenList.map((c) => (
-              <button
-                key={c.key}
-                className={`switch-chip ${c.key === childKey ? 'active' : ''}`}
-                onClick={() => onSwitch(c.key)}
-              >
-                {c.avatar} {c.nickname}
-              </button>
-            ))}
-          </div>
-        )}
-        <button className="new-kid-btn" onClick={onNewKid}>✨ I'm new here!</button>
         <button className="profiles-link" onClick={onProfiles}>Kids 👥</button>
       </main>
+      )}
     </div>
   );
 }

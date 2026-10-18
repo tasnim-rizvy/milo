@@ -14,7 +14,7 @@ import { levelStats } from './engine/curriculum.js';
 export async function buildApp(opts = {}) {
   const app = Fastify({ logger: false, bodyLimit: 64 * 1024 });
   const store = opts.store || openStore(opts.dbPath || config.dbPath);
-  if (!opts.noSeed) seedDemo(store);
+  if (opts.seed ?? config.seedDemo) seedDemo(store);
   app.decorate('miloStore', store);
 
   // Same-origin only: the built client is served by this server and the Vite dev
@@ -86,9 +86,6 @@ export async function buildApp(opts = {}) {
   app.delete('/api/children/:key', async (req, reply) => {
     const key = req.params.key;
     if (!store.child(key)) return reply.code(404).send({ error: 'no such child' });
-    if (store.children().length <= 1) {
-      return reply.code(400).send({ error: 'keep at least one kid profile' });
-    }
     store.deleteChild(key);
     return { ok: true, children: store.children().map(summarizeChild) };
   });
@@ -107,7 +104,8 @@ export async function buildApp(opts = {}) {
     };
   });
 
-  app.post('/api/reset-demo', async () => {
+  app.post('/api/reset-demo', async (req, reply) => {
+    if (!(opts.seed ?? config.seedDemo)) return reply.code(404).send({ error: 'demo mode is off' });
     seedDemo(store, { force: true });
     return { ok: true, children: store.children().map(summarizeChild) };
   });

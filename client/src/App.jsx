@@ -7,7 +7,6 @@ import Confetti from './components/Confetti.jsx';
 import BadgePop from './components/BadgePop.jsx';
 import StickerBook from './components/StickerBook.jsx';
 import KidProfiles from './components/KidProfiles.jsx';
-import ProfileForm from './components/ProfileForm.jsx';
 import DevPanel from './components/DevPanel.jsx';
 
 const IDLE_MS = 45000;
@@ -17,8 +16,9 @@ export default function App() {
   const devOn = useMemo(() => new URLSearchParams(location.search).get('dev') === '1', []);
 
   const [children, setChildren] = useState([]);
+  const [childrenLoaded, setChildrenLoaded] = useState(false);
   const [childKey, setChildKey] = useState(() => {
-    try { return localStorage.getItem('milo-child') || 'maya'; } catch { return 'maya'; }
+    try { return localStorage.getItem('milo-child') || ''; } catch { return ''; }
   });
   const [screen, setScreen] = useState('home');
   const [sessionId, setSessionId] = useState(null);
@@ -38,7 +38,6 @@ export default function App() {
   const [latSamples, setLatSamples] = useState([]);
   const [stickersOpen, setStickersOpen] = useState(false);
   const [profilesOpen, setProfilesOpen] = useState(false);
-  const [newKidOpen, setNewKidOpen] = useState(false);
   const [badges, setBadges] = useState([]);
   const [dev, setDev] = useState(null);
   const [muted, setMuted] = useState(sound.muted);
@@ -54,7 +53,12 @@ export default function App() {
   useEffect(() => { endCardRef.current = endCard; }, [endCard]);
 
   const reloadChildren = useCallback(() => {
-    getChildren().then((d) => setChildren(d.children || [])).catch(() => {});
+    getChildren().then((d) => {
+      const list = d.children || [];
+      setChildren(list);
+      setChildKey((k) => (list.some((c) => c.key === k) ? k : list[0]?.key || ''));
+      setChildrenLoaded(true);
+    }).catch(() => {});
   }, []);
   useEffect(() => { reloadChildren(); }, [reloadChildren]);
 
@@ -239,7 +243,7 @@ export default function App() {
     const d = await getChildren();
     const rest = d.children || [];
     setChildren(rest);
-    if (key === childKey && rest[0]) switchChild(rest[0].key);
+    if (key === childKey) switchChild(rest[0]?.key || '');
   }, [childKey, switchChild]);
 
   const lat = useMemo(() => {
@@ -259,7 +263,8 @@ export default function App() {
           onSwitch={switchChild}
           onStickers={openStickers}
           onProfiles={openProfiles}
-          onNewKid={() => { sound.tap(); setNewKidOpen(true); }}
+          onCreate={makeKid}
+          ready={childrenLoaded}
           muted={muted}
           onToggleMute={() => setMuted(sound.toggle())}
         />
@@ -292,20 +297,6 @@ export default function App() {
       {badgePop && <BadgePop badge={badgePop} onDone={() => setBadgePop(null)} />}
       {stickersOpen && (
         <StickerBook badges={badges} child={child} onClose={() => { sound.tap(); setStickersOpen(false); }} />
-      )}
-      {newKidOpen && (
-        <div className="overlay" onClick={() => setNewKidOpen(false)} role="dialog" aria-label="Tell Milo about you">
-          <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="sheet-head">
-              <div>
-                <div className="sheet-title">Hi, I'm Milo! 🦊</div>
-                <div className="sheet-sub">Tell me about you, so I can pick the right words.</div>
-              </div>
-              <button className="icon-btn" onClick={() => setNewKidOpen(false)} aria-label="Close">✕</button>
-            </div>
-            <ProfileForm onSubmit={async (data) => { await makeKid(data); setNewKidOpen(false); }} />
-          </div>
-        </div>
       )}
       {profilesOpen && (
         <KidProfiles

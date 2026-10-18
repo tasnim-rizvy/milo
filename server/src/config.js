@@ -8,6 +8,8 @@ export const config = {
   env: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT || 3001),
   host: process.env.HOST || '0.0.0.0',
+  // Demo fixtures (Maya/Aarav) exist only for the evidence tools — never for real users.
+  seedDemo: process.env.MILO_DEMO === '1',
   rootDir,
   dbPath: process.env.DB_PATH || join(rootDir, 'server', 'data', 'milo.db'),
   clientDist: join(rootDir, 'client', 'dist'),

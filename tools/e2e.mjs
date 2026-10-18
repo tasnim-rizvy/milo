@@ -72,12 +72,13 @@ async function main() {
   });
 
   // ── 1 · Home ───────────────────────────────────────────────────────────────
+  // Demo fixtures (server started with MILO_DEMO=1): the tour plays as Maya, then Aarav.
   await page.goto(`${BASE}/?dev=1`, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => localStorage.setItem('milo-child', 'maya'));
+  await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.tiles', { timeout: 15000 });
   await sleep(600);
   ok('home renders with 4 tiles + stickers', (await page.$$('.tile')).length === 4);
-  const switcher = await page.$$('.switch-chip');
-  ok('demo profiles visible (Maya/Aarav switcher)', switcher.length === 2);
   await page.screenshot({ path: join(EVID, '01-home.png') });
 
   // ── 2 · Maya L1 lesson: mood → wrong chip → correct chip ─────────────────
@@ -139,9 +140,9 @@ async function main() {
 
   // ── 4 · Aarav: mid-L2 → stage check → graduation ─────────────────────────
   await postJson('/api/reset-demo', {});
+  await page.evaluate(() => localStorage.setItem('milo-child', 'aarav'));
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.tiles', { timeout: 15000 });
-  await clickText('.switch-chip', 'Aarav');
   await clickText('.tile', 'Learn');
   await page.waitForFunction(() => (window.__milo?.n || 0) >= 1, { timeout: 15000 });
   await clickText('.chip', 'happy');
