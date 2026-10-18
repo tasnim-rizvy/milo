@@ -32,7 +32,7 @@ export default function ChatView({
     <div className="chatview">
       <header className="topbar">
         <div className="topbar-left">
-          <span className="stars-pill" title="Stars earned today">⭐ {stars}</span>
+          <span className="stars-pill" title="Your stars">⭐ {stars}</span>
           <span className={`mode-pill ${cls}`}>{emoji} {label}</span>
         </div>
         <div className="topbar-right">
@@ -81,13 +81,13 @@ export default function ChatView({
         {endCard && (
           <div className="endcard">
             <div className="endcard-title">Great playing today, {child?.nickname || 'friend'}! 🦊</div>
-            <div className="endcard-stars">⭐ {endCard.stars ?? stars} stars</div>
+            <div className="endcard-stars">⭐ {endCard.stars ?? 0} stars today</div>
             {wordsOf(endCard).length > 0 && (
               <div className="endcard-words">
                 {wordsOf(endCard).map((w, i) => <span className="endcard-word" key={i}>{w}</span>)}
               </div>
             )}
-            <button className="btn-primary" onClick={onPlayAgain}>Play again 🔁</button>
+            <button className="btn-primary" onClick={onPlayAgain}>Back home 🏠</button>
           </div>
         )}
         <div ref={endRef} />

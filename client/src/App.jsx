@@ -30,7 +30,8 @@ export default function App() {
   const [typing, setTyping] = useState(false);
   const [streamText, setStreamText] = useState('');
   const [mode, setMode] = useState('learning');
-  const [stars, setStars] = useState(0);
+  const [stars, setStars] = useState(0); // stars earned this session
+  const [starBase, setStarBase] = useState(0); // stars saved before this session
   const [calm, setCalm] = useState(false);
   const [confettiKey, setConfettiKey] = useState(0);
   const [badgePop, setBadgePop] = useState(null);
@@ -160,6 +161,7 @@ export default function App() {
       setInput('');
       setEndCard(null);
       setStars(0);
+      setStarBase(children.find((c) => c.key === childKey)?.total_stars || 0);
       setLatSamples([]);
       setBadgePop(null);
       setCalm(intent === 'calm');
@@ -173,7 +175,7 @@ export default function App() {
     } catch {
       window.alert('Milo could not wake up 😴 — please make sure the server is running.');
     }
-  }, [applyTurn, childKey, touch]);
+  }, [applyTurn, childKey, children, touch]);
 
   const onChip = useCallback((chip) => {
     if (chip.kind === 'word') {
@@ -193,8 +195,6 @@ export default function App() {
     return sendInput({ type: 'text', text }, text);
   }, [input, sendInput]);
 
-  const onExit = useCallback(() => { sendInput({ type: 'text', text: 'bye' }, '👋 bye'); }, [sendInput]);
-
   const goHome = useCallback(() => {
     sound.tap();
     setScreen('home');
@@ -211,6 +211,16 @@ export default function App() {
     setStreamText('');
     reloadChildren();
   }, [reloadChildren]);
+
+  // ✕ goes straight home. The goodbye is still sent in the background so the
+  // session is closed server-side (summary + mood end feed tomorrow's memory).
+  const onExit = useCallback(() => {
+    const sid = sessionRef.current;
+    if (sid && !endCardRef.current && !busyRef.current) {
+      sendMessage(sid, { type: 'text', text: 'bye' }).catch(() => {});
+    }
+    goHome();
+  }, [goHome]);
 
   const openStickers = useCallback(async () => {
     sound.tap();
@@ -273,7 +283,7 @@ export default function App() {
           child={child}
           calm={calm}
           mode={mode}
-          stars={stars}
+          stars={starBase + stars}
           latency={lat}
           messages={messages}
           typing={typing}
