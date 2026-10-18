@@ -1,6 +1,6 @@
 {
-  "base": "http://localhost:3001",
-  "ranAt": "2026-10-18T04:17:09.908Z",
+  "base": "http://localhost:3002",
+  "ranAt": "2026-10-18T09:05:11.141Z",
   "checks": [
     {
       "name": "server health",
@@ -8,17 +8,12 @@
       "detail": ""
     },
     {
-      "name": "home renders with 4 tiles + stickers",
+      "name": "home: one big Let's go button + stickers, no menu of tiles",
       "pass": true,
       "detail": ""
     },
     {
-      "name": "demo profiles visible (Maya/Aarav switcher)",
-      "pass": true,
-      "detail": ""
-    },
-    {
-      "name": "greeting asks how Maya feels (mood chips)",
+      "name": "greeting opens with a wonder puzzle, no mood buttons",
       "pass": true,
       "detail": ""
     },
@@ -35,7 +30,7 @@
     {
       "name": "wrong chip → recast, never the word \"wrong\"",
       "pass": true,
-      "detail": "Look, the word hi is here 😊. Can you tap hi?"
+      "detail": "Nice try! bye is 👋 — but I asked for hi 👋. Find hi!"
     },
     {
       "name": "recast keeps the same question alive (retry)",
@@ -78,7 +73,7 @@
       "detail": ""
     },
     {
-      "name": "\"Play again\" returns home (no dead end)",
+      "name": "\"Back home\" returns home (no dead end)",
       "pass": true,
       "detail": ""
     },

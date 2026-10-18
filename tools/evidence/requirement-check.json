@@ -1,6 +1,6 @@
 {
-  "base": "http://localhost:3001",
-  "ranAt": "2026-10-18T04:15:20.772Z",
+  "base": "http://localhost:3002",
+  "ranAt": "2026-10-18T09:04:32.029Z",
   "checks": [
     {
       "id": "R1",
@@ -112,7 +112,7 @@
     },
     {
       "id": "NO-PARENT",
-      "name": "all 266 user-facing lines never address parents/grown-ups",
+      "name": "all 258 user-facing lines + client UI copy never address parents/grown-ups",
       "pass": true,
       "detail": ""
     }

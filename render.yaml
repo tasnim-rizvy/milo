@@ -1,6 +1,9 @@
 # Render blueprint — https://render.com/docs/blueprint-spec
-# Free plan: Docker web service, no credit card, spins down after idle
-# (first request after a nap takes ~30 s to wake).
+# Free plan: Docker web service, no credit card. It spins down after ~15 min idle
+# (the first request after a nap takes 30–60 s) and its disk is TEMPORARY — profiles
+# and progress reset on sleep / restart / redeploy. A free uptime monitor pinging
+# /api/health every 5 min keeps it awake. For durable data add a persistent disk
+# (paid) and set DB_PATH to a path on it.
 services:
   - type: web
     name: milo
@@ -11,7 +14,9 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     # Optional LLM warmth — free tiers, no credit card (docs/02 §5):
-    #   GROQ_API_KEY   — create at console.groq.com (primary; fast)
+    #   GROQ_API_KEY   — create at console.groq.com (primary; fast). The free tier
+    #                    allows a few hundred AI replies a day; Milo then falls back
+    #                    to a second model and finally to its scripted lines.
     #   GEMINI_API_KEY — optional extra rung (aistudio.google.com); on some
     #                    networks its first byte is too slow to ever serve.
     # Paste at deploy time or later in Dashboard → Environment. Without keys

@@ -134,9 +134,9 @@ async function main() {
   await page.screenshot({ path: join(EVID, '07-endcard-maya.png') });
 
   // play again → home
-  await clickText('.btn-primary', 'Play again');
+  await clickText('.btn-primary', 'Back home');
   await page.waitForSelector('.start-btn', { timeout: 8000 });
-  ok('"Play again" returns home (no dead end)', true);
+  ok('"Back home" returns home (no dead end)', true);
 
   // ── 4 · Aarav: mid-L2 → stage check → graduation ─────────────────────────
   await postJson('/api/reset-demo', {});
