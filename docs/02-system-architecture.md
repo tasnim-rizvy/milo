@@ -1,5 +1,7 @@
 # 02 · System Architecture, Latency & Tech Stack
 
+> **Planning document** (written before the build). For the system as built, see [`SYSTEM-DESIGN.md`](SYSTEM-DESIGN.md) and [`architecture.png`](architecture.png).
+
 *How the system is shaped, how a single chat turn flows, and how we stay under 2 seconds with room to spare.*
 
 ## 1. Architecture at a glance

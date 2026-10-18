@@ -16,19 +16,21 @@ analysis, architecture, learning design, UI/UX plan, user journeys, and the buil
 
 | | |
 |---|---|
-| **Main link** | A Cloudflare quick tunnel from the development machine — `npm run tunnel` prints the live URL (the link is shared in the submission message; it changes on every restart) |
-| **Always-up backup** | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/tasnim-rizvy/milo) — free Docker instance from [`render.yaml`](render.yaml) |
+| **Live app** | <https://milo-2f8q.onrender.com/> |
+| **Source code** | <https://github.com/tasnim-rizvy/milo> |
+| **Architecture diagram** | [`docs/architecture.png`](docs/architecture.png) ([SVG source](docs/architecture.svg)) |
+| **System design** | [`docs/SYSTEM-DESIGN.md`](docs/SYSTEM-DESIGN.md) |
 
-- **Main link (tunnel).** Fast and keeps every child's saved progress (SQLite on the host's disk),
-  but it is only up while the host machine is awake and Milo + the tunnel are running. Streaming
-  replies work through it (checked: words arrive as separate chunks, a whole reply in < 0.75 s
-  from outside the machine).
-- **Backup (Render free tier) — read this before testing it.** The free tier **sleeps after ~15
-  minutes idle (the first visit then takes 30–60 s)** and its disk is temporary, so **profiles and
-  progress can reset after a sleep, restart or redeploy**. A free uptime monitor pinging
-  `/api/health` every 5 minutes (e.g. UptimeRobot) keeps it awake. It is a convenience backup, not
-  the primary demo; durable storage (a persistent disk or an external database) is the production
-  next step.
+![Milo architecture](docs/architecture.png)
+
+- **Live app (Render free tier) — read this before testing.** The free tier **sleeps after ~15
+  minutes idle, so the first visit can take 30–60 seconds to wake**, and its disk is temporary, so
+  **profiles and progress can reset after a sleep, restart or redeploy**. After waking, replies
+  come back in under a second (524–977 ms measured on the live deployment). A free uptime monitor
+  pinging `/api/health` every 5 minutes keeps it awake. Durable storage (a persistent disk or a
+  managed database) is the production next step.
+- **Optional local tunnel.** `npm run tunnel` publishes a local run through a Cloudflare quick
+  tunnel — fast and keeps data on your own disk, but only while your machine is on.
 - **Profiles, no logins.** A child is profiled by a short first-run form (name, age 4–6, can they
   read, favourite things). Profiles belong to the device that made them (a random id kept in the
   browser) — nobody else can list, open or delete them. No emails, passwords or accounts.
@@ -165,20 +167,35 @@ React + Vite client ── same origin ──▶ Fastify server (one process, no
 
 ## Deploy
 
+**Render (what the live app uses).** The repo is Docker-ready (`Dockerfile`, `render.yaml`).
+
+1. Push the repo to GitHub.
+2. In Render: **New → Blueprint**, pick the repo (or click the *Deploy to Render* button above).
+3. When asked, paste `GROQ_API_KEY` (free at console.groq.com) — or leave it empty to run on the
+   scripted fast-path only. Optional extras: `GEMINI_API_KEY`, `GROQ_MODEL`, `GROQ_FALLBACK_MODELS`.
+4. Apply. Render builds the image, starts it, and health-checks `GET /api/health`.
+5. Your stable URL appears on the service page. On the free plan the instance sleeps when idle and
+   its disk is temporary (see *Live demo*).
+
+**Docker anywhere:**
+
 ```bash
-docker build -t milo . && docker run -p 3001:3001 milo   # multi-stage, prod deps only
+docker build -t milo . && docker run -p 3001:3001 -e GROQ_API_KEY=your_key milo
 ```
 
-The image was verified locally (health endpoint, a full SSE chat turn, and the static client all
-served from the container). On Render, [`render.yaml`](render.yaml) defines the free Docker web
-service with a `/api/health` health check; `PORT`/`HOST` are read from the environment, and the
-container's disk is temporary on the free tier, so profiles reset when it sleeps or redeploys
-(see the Live demo notes). Set `GROQ_API_KEY` in the dashboard to enable the AI.
+**Environment variables** (all optional): `GROQ_API_KEY`, `GROQ_MODEL` (default `openai/gpt-oss-120b`),
+`GROQ_FALLBACK_MODELS` (default `openai/gpt-oss-20b`), `GEMINI_API_KEY`, `LLM_PRIORITY`, `PORT`,
+`HOST`, `DB_PATH`, `MILO_DEMO=1` (demo profiles for the evidence tools).
 
 ## Documents
 
+Files `01`–`06` below are the original planning documents written before the build; where they differ
+from `SYSTEM-DESIGN.md`, the latter is correct.
+
 | File | Contents |
 |---|---|
+| [`docs/SYSTEM-DESIGN.md`](docs/SYSTEM-DESIGN.md) | **System design as built** — requirements mapping, architecture, a turn end to end, AI layer, data, privacy, latency, deployment, trade-offs |
+| [`docs/architecture.png`](docs/architecture.png) · [`.svg`](docs/architecture.svg) | **Architecture diagram** |
 | [`docs/01-requirements-analysis.md`](docs/01-requirements-analysis.md) | Requirement-by-requirement analysis, reading-spectrum assumptions, design principles, scope |
 | [`docs/02-system-architecture.md`](docs/02-system-architecture.md) | Architecture, turn lifecycle, latency budget, tech stack, data model, safety |
 | [`docs/03-learning-design.md`](docs/03-learning-design.md) | L1–L3 curriculum, mastery/progression rules, mode-detection engine, SEL library |

@@ -1,5 +1,7 @@
 # 03 · Learning Design: Curriculum, Progression, Modes & SEL
 
+> **Planning document** (written before the build). For the system as built, see [`SYSTEM-DESIGN.md`](SYSTEM-DESIGN.md) and [`architecture.png`](architecture.png).
+
 *The pedagogy and the "brain" of the bot: what it teaches, when it advances, how it reads the child, and how it cares.*
 
 ---

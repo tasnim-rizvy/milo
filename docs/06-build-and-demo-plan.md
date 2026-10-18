@@ -1,5 +1,7 @@
 # 06 · Build & Demo Plan (Oct 17 → Oct 18, 7:00 PM)
 
+> **Planning document** (written before the build). For the system as built, see [`SYSTEM-DESIGN.md`](SYSTEM-DESIGN.md) and [`architecture.png`](architecture.png).
+
 *The plan that assumes the worst and still ships: scope frozen tonight, demo rehearsed tomorrow.*
 
 ---

@@ -1,5 +1,7 @@
 # 05 · User Journeys & Sample Dialogues
 
+> **Planning document** (written before the build). For the system as built, see [`SYSTEM-DESIGN.md`](SYSTEM-DESIGN.md) and [`architecture.png`](architecture.png).
+
 *The story of a real week with Milo — plus the playbook for everything that goes sideways.*
 
 *(All dialogues below are chat transcripts: taps on answer chips are shown in [brackets]; typed text is plain.)*

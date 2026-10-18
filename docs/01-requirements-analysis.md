@@ -1,5 +1,7 @@
 # 01 · Requirements Analysis
 
+> **Planning document** (written before the build). For the system as built, see [`SYSTEM-DESIGN.md`](SYSTEM-DESIGN.md) and [`architecture.png`](architecture.png).
+
 *Analysis of the competition brief for "AI-Powered English Learning Chatbot for Children (Under 7 Years Old)".*
 
 ## 1. What the brief actually asks for

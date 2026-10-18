@@ -1,5 +1,7 @@
 # 04 · UI/UX Plan
 
+> **Planning document** (written before the build). For the system as built, see [`SYSTEM-DESIGN.md`](SYSTEM-DESIGN.md) and [`architecture.png`](architecture.png).
+
 *Designing a chatbot for someone whose reading ability ranges from "emoji only" to "short sentences" — without ever requiring a microphone.*
 
 ---
