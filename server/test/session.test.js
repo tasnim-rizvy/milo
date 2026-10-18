@@ -167,6 +167,32 @@ test('feelings turn is LLM-shaped: scripted safety net + calm options when no ke
   assert.ok(!t.events.some((e) => e.type === 'llm_fallback'), 'no-keys is not a fallback event');
 });
 
+test('briefed warmth moments fall back to scripted twins when there are no keys', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  const child = store.child('maya');
+  const { id } = createSession(store, child, 'learn');
+
+  // mood mirror (briefed moment)
+  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  assert.equal(t.dev.llm, false, 'no keys → scripted mood mirror');
+  assert.ok(!t.events.some((e) => e.type === 'llm_fallback'), 'no-keys is not a fallback event');
+
+  // correct chip → scripted praise still names the word + star
+  const rightId = t.expect.answers[0];
+  const rightLabel = t.options.find((o) => o.id === rightId).label;
+  t = await handleInput(store, child, id, { type: 'chip', chipId: rightId });
+  assert.equal(t.dev.llm, false, 'no keys → scripted praise');
+  assert.equal(t.effects.starGain, 1);
+  assert.ok(t.messages[0].say.toLowerCase().includes(rightLabel.toLowerCase()), 'praise names the word');
+
+  // wrong chip → scripted recast (never "wrong")
+  const wrong = t.options.find((o) => !t.expect.answers.includes(o.id));
+  const recast = await handleInput(store, child, id, { type: 'chip', chipId: wrong.id });
+  assert.equal(recast.dev.llm, false, 'no keys → scripted recast');
+  assert.ok(!/\bwrong\b/i.test(say(recast)));
+});
+
 test('"i want to play" switches to 🎮 engagement with chips', async () => {
   const store = openStore(':memory:');
   seedDemo(store);

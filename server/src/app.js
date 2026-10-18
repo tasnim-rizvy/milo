@@ -8,6 +8,7 @@ import { config, llmProviders } from './config.js';
 import { openStore } from './store.js';
 import { seedDemo } from './seed.js';
 import { createSession, handleInput } from './engine/session.js';
+import { composeFreeTurn } from './llm/compose.js';
 import { levelStats } from './engine/curriculum.js';
 
 export async function buildApp(opts = {}) {
@@ -63,6 +64,19 @@ export async function buildApp(opts = {}) {
     const child = store.child(childKey);
     if (!child) return reply.code(404).send({ error: 'no such child' });
     const { id, turn } = createSession(store, child, intent);
+    // AI-warm the very first line (the scripted greeting is already in place as
+    // the fallback — a slow model never delays the session beyond its budget).
+    if (intent !== 'calm' && turn.messages?.length) {
+      const llm = await composeFreeTurn({
+        task: { type: 'greeting', name: child.nickname },
+        child, store, input: '', history: [],
+        scriptedFallback: turn.messages[0].say,
+      });
+      if (llm.usedLLM) {
+        turn.messages[0] = { say: llm.say, mood: 'cheer' };
+        turn.dev = { ...(turn.dev || {}), llm: true, llmProvider: llm.provider || null };
+      }
+    }
     return { sessionId: id, turn, child: summarizeChild(store.child(child.key)) };
   });
 

@@ -1,6 +1,6 @@
 {
-  "base": "http://localhost:3002",
-  "ranAt": "2026-10-17T21:11:20.540Z",
+  "base": "http://localhost:3001",
+  "ranAt": "2026-10-18T04:17:09.908Z",
   "checks": [
     {
       "name": "server health",
@@ -35,7 +35,7 @@
     {
       "name": "wrong chip → recast, never the word \"wrong\"",
       "pass": true,
-      "detail": "Almost! please lives over there. Here is hi 👋 — tap it with"
+      "detail": "Look, the word hi is here 😊. Can you tap hi?"
     },
     {
       "name": "recast keeps the same question alive (retry)",

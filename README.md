@@ -27,15 +27,17 @@ analysis, architecture, learning design, UI/UX plan, user journeys, and the buil
 - **No API keys needed.** The engine ships with a scripted fast-path, so every feature works with
   zero configuration (`llm: []` in `/api/health`). Gemini/Groq keys, when present, only add warmth
   on top — the ladder falls back to scripted within a 1.2 s first-token budget.
-- **The current public preview runs with warmth live**: Groq answers free-chat and feelings turns
-  (~0.7 s to first token, streaming to the bubble); chip/teaching turns stay instant and
-  deterministic. `/api/health` lists exactly what's live.
+- **The current public preview runs with warmth live**: Groq phrases every warmth moment — free
+  chat, feelings, praise, gentle recasts, growth check-ins, mood mirrors — from strict engine
+  "turn briefs" (~0.5–0.8 s to first token, streaming to the bubble). The engine still owns all
+  task logic, chips, stars and safety; every briefed line has a scripted twin that serves when the
+  model is slow, rate-limited, or its output fails the programmatic checks.
 - **Want live generations instead of the scripted bank?** Paste one free key — `GROQ_API_KEY`
   (console.groq.com, card-free) — into Render's environment (or `.env` locally). A
   `GEMINI_API_KEY` (aistudio.google.com) is also supported as an optional extra rung, but on some
-  networks Gemini's first byte is far too slow to ever serve. Free-chat and feelings turns then
-  stream from the model within the budget above; teaching/chip turns stay instant and
-  deterministic by design.
+  networks Gemini's first byte is far too slow to ever serve. With a key, warmth moments stream
+  from the model within the budget above; with no key, the scripted bank runs every moment — the
+  whole lesson stays playable offline.
 
 ### 3-minute tour
 
@@ -52,30 +54,32 @@ analysis, architecture, learning design, UI/UX plan, user journeys, and the buil
 
 ## Requirements → evidence
 
-Live evidence in [`tools/evidence/`](tools/evidence/) was produced against the public URL
-(base + timestamp stamped inside each JSON).
+Live evidence in [`tools/evidence/`](tools/evidence/) is stamped with the exact base URL and
+timestamp it was produced against (the committed run: `http://localhost:3001`).
 
 | Brief requirement | Where it lives | Verified by |
 |---|---|---|
-| **R1 · Teaches step-by-step, progress across sessions** | `server/src/engine/curriculum.js` — Leitner boxes, 80% mastery gate (coverage & first-try), 5-task stage check, graduation | 47 server tests · requirement-check `[R1]` ×3 (L1 lesson, gate-ready profile, `phase=STAGE`) · e2e “all 5 stage-check tasks answered”, “Aarav promoted L2 → L3” |
+| **R1 · Teaches step-by-step, progress across sessions** | `server/src/engine/curriculum.js` — Leitner boxes, 80% mastery gate (coverage & first-try), 5-task stage check, graduation | 64 server tests · requirement-check `[R1]` ×3 (L1 lesson, gate-ready profile, `phase=STAGE`) · e2e “all 5 stage-check tasks answered”, “Aarav promoted L2 → L3” |
 | **R2 · Not every turn is a lesson** | `server/src/engine/modes.js` — learning / conversation / engagement / support, hysteresis + idle cascade | requirement-check `[R2]` ×3 (`"i want plaay!"` → engagement, `"i'm tired"` → support, 3 misses → support) |
 | **R3 · Social-emotional learning woven in** | `server/src/engine/sel.js` + `session.js` — recasts without the word “wrong”, effort praise, feeling check-ins, Calm Corner, goodbye ritual | requirement-check `[R3]` ×4 · e2e calm-corner & end-card checks · tests |
 | **R4 · Remembers context across sessions** | learner card + spaced-repetition due list + recent turns (`session.js`, `curriculum.js`) | requirement-check `[R4]` ×2 (“Yesterday: elephant 🐘”, interests “dinosaurs”) |
-| **R5 · Responds in < 2 s** | scripted fast-path for chips; streamed LLM only for free text, budgeted (`config.js`) | `tools/evidence/latency.json` (table below) · requirement-check `[R5]` ×3 (p95 chip 155 ms, text 33.5 ms, max 133.3 ms) |
+| **R5 · Responds in < 2 s** | streamed warm replies with a 1.2 s first-token budget + scripted twins that answer instantly when the model can't | `tools/evidence/latency.json` (table below) · requirement-check `[R5]` ×4 — chip p95 974 ms, first words p95 938 ms, text p95 746 ms, max 1290 ms |
 | **No voice / no microphone** | no audio input APIs anywhere | requirement-check `[NO-VOICE]` (codebase-wide grep) |
 | **No parent / grown-up surfaces** | all copy speaks to the child only | requirement-check `[NO-PARENT]` — all 266 user-facing lines scan clean |
 | **Safety** | `server/src/engine/safety.js` — gentle redirects, never echoes, logs events | requirement-check `[SAFE]` — red-team list 6/6 redirect gently |
 
-### Measured latency (scripted path, same machine)
+### Measured latency (warmth live on Groq, same machine)
 
-| Suite | What it measures | p50 | p95 | max | Target |
-|---|---|---|---|---|---|
-| A · 19 chip turns | round trip → reply bubble | 110.3 ms | 155.0 ms | 155.0 ms | p95 ≤ 500 ms |
-| B · 10 free-text turns | round trip → reply bubble | 33.3 ms | 33.5 ms | 33.5 ms | p95 ≤ 1500 ms |
-| C · 10 worst-case turns | misses/idle/recast-heavy mix | 111.7 ms | 133.3 ms | 133.3 ms | < 2000 ms budget |
+| Suite | What it measures | full p50 / p95 | first words p50 / p95 | Target |
+|---|---|---|---|---|
+| A · 19 chip turns | tap → streamed praise/recast complete (18/19 LLM-served) | 587 / 974 ms | 551 / 938 ms | full p95 ≤ 1500 ms · first words p95 ≤ 1100 ms |
+| B · 10 free-text turns | chat turn complete (10/10 LLM-served) | 592 / 746 ms | 549 / 707 ms | full p95 ≤ 1500 ms |
+| C · 10 cold starts | session create + greeting + mood chip → first task | 1169 / 1290 ms | 1126 / 1253 ms | all < 2000 ms budget |
 
-Measured on the app itself (server processing + stream). The public tunnel adds network time on
-top; the < 2 s product budget still holds with a huge margin.
+Measured on the app itself (server processing + streaming) with a free-tier key. When the model is
+slow or rate-limited, the scripted twin answers instead — always inside the same budget (fastest
+fallback sample: 9.9 ms). The public tunnel adds network time on top; the < 2 s product budget
+still holds.
 
 ## Quickstart
 
@@ -99,14 +103,14 @@ npm run dev:client   # Vite on :5173, proxies /api → :3001
 ## Tests & evidence
 
 ```bash
-npm test             # 47 unit/integration tests (node --test)
-npm run requirements # 18/18 live requirement checks → tools/evidence/requirement-check.json
+npm test             # 64 unit/integration tests (node --test)
+npm run requirements # 19/19 live requirement checks → tools/evidence/requirement-check.json
 npm run latency      # latency suites A/B/C     → tools/evidence/latency.json
 npm run e2e          # 24-check headless browser tour → tools/evidence/ (+ 10 screenshots)
 ```
 
 - `E2E_BASE=https://…` points every tool at any deployment (the committed evidence was captured
-  against the public URL).
+  against `http://localhost:3001`, stamped inside each JSON).
 - `npm run e2e` needs Chrome/Chromium (`CHROME_PATH`, default `/opt/google/chrome/chrome`).
 - Screenshots: [`01-home`](tools/evidence/01-home.png) … [`10-endcard-aarav`](tools/evidence/10-endcard-aarav.png) —
   the full tour, in order.
@@ -125,8 +129,10 @@ React + Vite client ── same origin ──▶ Fastify server (one process, no
   `session.js` (turn assembly, double-tap guard, idle cascade), `sel.js` (all child-facing lines),
   `safety.js`, `llm.js` (optional Gemini → Groq → scripted ladder), `store.js` + `seed.js`
   (`node:sqlite`, Maya + Aarav demo profiles seeded on boot).
-- **Scripted-first by design**: teaching turns are known answer-sets, so chips answer instantly and
-  deterministically; LLMs only add free-talk warmth and can never break pedagogy or latency.
+- **Engine decides, model phrases**: every pedagogical decision (which word, stars, gates, chips,
+  safety) is deterministic code; the LLM only finds warmer words for a strict per-turn brief, and
+  programmatic checks (must-word, never "wrong", no dangling question, no verbatim repeats) send
+  the scripted twin whenever a generation drifts.
 - **Privacy**: no accounts, no credentials, local SQLite file, demo data resettable from the dev
   panel or `POST /api/reset-demo`.
 

@@ -1,8 +1,10 @@
 // Dialog manager (docs/02 §5): HOME → GREET → CHECK-IN → REVIEW → TEACH
 // (model → join-in → independent) → PLAY → CELEBRATE → WRAP-UP, with
 // CONVERSATION (≤3 turns) and SUPPORT_CALM interrupts. SUPPORT preempts
-// everything; chip answers never wait on an LLM; feelings turns stream from
-// the LLM with the scripted bank as the safety net; "wrong" is never said.
+// everything; the engine owns all task logic, while the warmth moments (praise,
+// recast, growth, check-ins, moods, feelings, free chat) are phrased by the
+// LLM from strict turn briefs — with the scripted bank as the always-on safety
+// net. "wrong" is never said.
 import { matchAnswer, containsAny, normalize } from './matching.js';
 import { classifySafety, SAFETY_REDIRECTS } from './safety.js';
 import { classifyInput, nextMode } from './modes.js';
@@ -22,6 +24,16 @@ const rid = () => Math.random().toString(36).slice(2, 10);
 const pickArr = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 const msg = (say, mood = 'happy') => ({ say, mood });
+
+// A scripted reply is never a mystery: log why the LLM didn't serve.
+function logLlmFallback(events, llm, where) {
+  if (!llm.usedLLM && llm.reason && llm.reason !== 'no-keys') {
+    events.push({
+      type: 'llm_fallback',
+      payload: { reason: llm.reason, where, ...(llm.detail ? { detail: llm.detail } : {}) },
+    });
+  }
+}
 
 // Did the session advance (new question / phase / mood) during this input?
 // Used by the double-tap guard. Counters and options are intentionally absent.
@@ -246,7 +258,7 @@ export async function handleInput(store, child, sessionId, input, onChunk = null
   try {
     if (input.type === 'idle') {
       state.counters.idleCount += 1;
-      result = handleIdle(store, child, state, events);
+      result = await handleIdle(store, child, state, events, onChunk);
     } else {
       state.counters.idleCount = 0;
       state.counters.idleNudged = false;
@@ -292,7 +304,7 @@ function currentItem(state) {
   return state.current?.item || (state.playTask?.itemId ? itemById(state.playTask.itemId) : null);
 }
 
-function handleIdle(store, child, state, events) {
+async function handleIdle(store, child, state, events, onChunk) {
   const c = state.counters;
   if (state.phase === 'WRAP' || state.phase === 'DONE') return turn(state, { messages: [], lessonAction: 'none' });
 
@@ -305,15 +317,16 @@ function handleIdle(store, child, state, events) {
       lessonAction: 'none',
     });
   }
-  if (c.idleCount === 2) return scaffoldStep(store, child, state, 'simpler', events);
-  if (c.idleCount === 3) return scaffoldStep(store, child, state, 'hint', events);
-  if (c.idleCount === 4) return scaffoldStep(store, child, state, 'show', events);
-  return scaffoldStep(store, child, state, 'move-on', events);
+  if (c.idleCount === 2) return scaffoldStep(store, child, state, 'simpler', events, onChunk);
+  if (c.idleCount === 3) return scaffoldStep(store, child, state, 'hint', events, onChunk);
+  if (c.idleCount === 4) return scaffoldStep(store, child, state, 'show', events, onChunk);
+  return scaffoldStep(store, child, state, 'move-on', events, onChunk);
 }
 
-function scaffoldStep(store, child, state, step, events) {
+async function scaffoldStep(store, child, state, step, events, onChunk) {
   const item = currentItem(state);
   const logged = { type: 'scaffold', payload: { step, item_id: item?.id || null } };
+  const history = (state.recent || []).slice(-6);
 
   if (!item) {
     const nt = nextTask(store, child, state, events);
@@ -323,35 +336,66 @@ function scaffoldStep(store, child, state, step, events) {
   if (step === 'simpler') {
     const two = chipOptions(item, Math.random, 2);
     state.lastOptions = two;
+    const fallbackLine = LINES.scaffoldSimpler[0].replaceAll('{word}', item.text).replaceAll('{emoji}', item.emoji);
+    const llm = await composeFreeTurn(
+      { task: { type: 'scaffold', step, word: item.text, emoji: item.emoji }, child, store, input: '', history, scriptedFallback: fallbackLine },
+      onChunk,
+    );
+    remember(state, `(stuck on ${item.text})`, llm.say);
+    logLlmFallback(events, llm, 'scaffold-simpler');
     return turn(state, {
-      messages: [msg(LINES.scaffoldSimpler[0].replaceAll('{word}', item.text).replaceAll('{emoji}', item.emoji), 'think')],
+      messages: [msg(llm.say, 'think')],
       options: two,
       expect: { type: 'chip', answers: [item.id] },
       lessonAction: 'scaffold',
+      llm: llm.usedLLM, llmProvider: llm.provider || null,
       events: [logged],
     });
   }
   if (step === 'hint') {
     const letter = item.text[0].toUpperCase();
+    const fallbackLine = LINES.scaffoldFirstLetter[0].replaceAll('{letter}', letter).replaceAll('{emoji}', item.emoji);
+    const llm = await composeFreeTurn(
+      { task: { type: 'scaffold', step, word: item.text, emoji: item.emoji, letter }, child, store, input: '', history, scriptedFallback: fallbackLine },
+      onChunk,
+    );
+    remember(state, `(still stuck on ${item.text})`, llm.say);
+    logLlmFallback(events, llm, 'scaffold-hint');
     return turn(state, {
-      messages: [msg(LINES.scaffoldFirstLetter[0].replaceAll('{letter}', letter).replaceAll('{emoji}', item.emoji), 'think')],
+      messages: [msg(llm.say, 'think')],
       options: state.lastOptions.length ? state.lastOptions : null,
       expect: state.expect,
       lessonAction: 'scaffold',
+      llm: llm.usedLLM, llmProvider: llm.provider || null,
       events: [logged],
     });
   }
   if (step === 'show') {
+    const fallbackLine = LINES.scaffoldShow[0].replaceAll('{word}', item.text).replaceAll('{emoji}', item.emoji);
+    const llm = await composeFreeTurn(
+      { task: { type: 'scaffold', step, word: item.text, emoji: item.emoji }, child, store, input: '', history, scriptedFallback: fallbackLine },
+      onChunk,
+    );
+    remember(state, `(still stuck on ${item.text})`, llm.say);
+    logLlmFallback(events, llm, 'scaffold-show');
     return turn(state, {
-      messages: [msg(LINES.scaffoldShow[0].replaceAll('{word}', item.text).replaceAll('{emoji}', item.emoji), 'cheer')],
+      messages: [msg(llm.say, 'cheer')],
       options: state.lastOptions.length ? state.lastOptions : null,
       expect: state.expect,
       lessonAction: 'scaffold',
+      llm: llm.usedLLM, llmProvider: llm.provider || null,
       events: [logged],
     });
   }
 
   // move on warmly — no penalty, the item comes back another day
+  const fallbackLine = pick(LINES.scaffoldMoveOn);
+  const llmM = await composeFreeTurn(
+    { task: { type: 'scaffold', step, word: item.text, emoji: item.emoji }, child, store, input: '', history, scriptedFallback: fallbackLine },
+    onChunk,
+  );
+  remember(state, `(moved on from ${item.text})`, llmM.say);
+  logLlmFallback(events, llmM, 'scaffold-move-on');
   state.counters.idleCount = 0;
   if (state.phase === 'STAGE' && state.stage) {
     if (state.stage.results[state.stage.idx] === undefined) state.stage.results[state.stage.idx] = false;
@@ -359,10 +403,10 @@ function scaffoldStep(store, child, state, step, events) {
     const nt = state.stage.idx >= 5
       ? stageCheckFinish(store, child, state, events)
       : presentStageTask(store, child, state, events);
-    return turn(state, { ...partsOf(nt), messages: [msg(pick(LINES.scaffoldMoveOn), 'care'), ...nt.messages], lessonAction: 'scaffold', events: [logged] });
+    return turn(state, { ...partsOf(nt), messages: [msg(llmM.say, 'care'), ...nt.messages], lessonAction: 'scaffold', events: [logged] });
   }
   const nt = nextTask(store, child, state, events);
-  return turn(state, { ...partsOf(nt), messages: [msg(pick(LINES.scaffoldMoveOn), 'care'), ...nt.messages], lessonAction: 'scaffold', events: [logged] });
+  return turn(state, { ...partsOf(nt), messages: [msg(llmM.say, 'care'), ...nt.messages], lessonAction: 'scaffold', events: [logged] });
 }
 
 // ── Chip handling ───────────────────────────────────────────────────────────
@@ -372,7 +416,7 @@ async function handleChip(store, child, state, input, events, onChunk) {
 
   if (chipId.startsWith('mood-')) {
     if (state.phase === 'WRAP') return handleWrapMood(store, child, state, chipId, events);
-    return handleMood(store, child, state, chipId, events);
+    return handleMood(store, child, state, chipId, events, onChunk);
   }
   if (chipId.startsWith('action-')) return handleAction(store, child, state, chipId, events, onChunk);
 
@@ -393,7 +437,7 @@ async function handleChip(store, child, state, input, events, onChunk) {
   }
 
   if (expected.answers.includes(chipId)) {
-    return onCorrect(store, child, state, item, { via: 'chip' }, events);
+    return onCorrect(store, child, state, item, { via: 'chip' }, events, onChunk);
   }
 
   // wrong chip → recast with the tapped item, never "wrong"
@@ -409,31 +453,50 @@ async function handleChip(store, child, state, input, events, onChunk) {
   }
 
   if (state.counters.missStreak >= 3 && state.phase !== 'STAGE') {
-    return supportCheckin(state, item, events);
+    return supportCheckin(store, child, state, item, events, onChunk);
   }
 
-  const line = pick(LINES.recast)
+  const fallbackRecast = pick(LINES.recast)
     .replaceAll('{tapped}', tapped?.label || 'that one')
     .replaceAll('{tapEmoji}', tapped?.emoji || '')
     .replaceAll('{word}', item.text)
     .replaceAll('{emoji}', item.emoji);
+  const llm = await composeFreeTurn(
+    {
+      task: { type: 'recast', word: item.text, emoji: item.emoji, tapped: tapped?.label || 'that one' },
+      child, store, input: '', history: (state.recent || []).slice(-6), scriptedFallback: fallbackRecast,
+    },
+    onChunk,
+  );
+  remember(state, `(tapped "${tapped?.label || 'something'}" — not ${item.text})`, llm.say);
+  logLlmFallback(events, llm, 'recast');
   return turn(state, {
-    messages: [msg(line, 'think')],
+    messages: [msg(llm.say, 'think')],
     options: state.lastOptions,
     expect: state.expect,
     lessonAction: 'retry',
+    llm: llm.usedLLM, llmProvider: llm.provider || null,
     events,
   });
 }
 
-function supportCheckin(state, item, events) {
+async function supportCheckin(store, child, state, item, events, onChunk) {
   state.mode = 'support';
   state.sticky = 2;
   state.counters.missStreak = 0;
   events.push({ type: 'mode_switch', payload: { to: 'support', reason: '3-miss streak' } });
-  const line = item
+  const fallbackLine = item
     ? pick(LINES.dontKnowCheckin).replaceAll('{word}', item.text).replaceAll('{emoji}', item.emoji)
     : pick(LINES.dontKnowCheckin).replaceAll('{word}', 'this one').replaceAll('{emoji}', '✨');
+  const llm = await composeFreeTurn(
+    {
+      task: { type: 'checkin', word: item?.text, emoji: item?.emoji },
+      child, store, input: '', history: (state.recent || []).slice(-6), scriptedFallback: fallbackLine,
+    },
+    onChunk,
+  );
+  remember(state, '(missed a few in a row)', llm.say);
+  logLlmFallback(events, llm, 'checkin');
   const two = item ? chipOptions(item, Math.random, 2) : null;
   if (item) {
     state.lastOptions = two;
@@ -441,12 +504,13 @@ function supportCheckin(state, item, events) {
   }
   return turn(state, {
     messages: [
-      msg(line, 'care'),
+      msg(llm.say, 'care'),
       msg(item ? pick(LINES.modelShareNoFx).replaceAll('{word}', item.text).replaceAll('{emoji}', item.emoji) : 'Watch me! Then you try. 💛', 'cheer'),
     ],
     options: two || state.lastOptions,
     expect: state.expect,
     lessonAction: 'scaffold',
+    llm: llm.usedLLM, llmProvider: llm.provider || null,
     events,
   });
 }
@@ -522,7 +586,7 @@ async function handleText(store, child, state, text, events, onChunk) {
   // 3) answer attempt against the expected task
   if (item && state.expect) {
     const matched = matchExpect(text, state.expect, item);
-    if (matched.ok) return onCorrect(store, child, state, item, { via: 'typing', match: matched.kind }, events);
+    if (matched.ok) return onCorrect(store, child, state, item, { via: 'typing', match: matched.kind, childText: text }, events, onChunk);
   }
 
   // 3b) stage-check wrong attempt: record first-attempt miss, recast, retry
@@ -566,13 +630,14 @@ async function handleText(store, child, state, text, events, onChunk) {
         ? pick(LINES.growthYet)
         : pick(LINES.calmOffer).replaceAll('{name}', child.nickname);
       const llm = await composeFreeTurn(
-        { mode: 'support', child, store, input: text, history: (state.recent || []).slice(-6), scriptedFallback: fallbackLine },
+        {
+          task: cls.kind === 'cant' ? { type: 'growth' } : null,
+          mode: 'support', child, store, input: text, history: (state.recent || []).slice(-6), scriptedFallback: fallbackLine,
+        },
         onChunk,
       );
       remember(state, text, llm.say);
-      if (!llm.usedLLM && llm.reason && llm.reason !== 'no-keys') {
-        events.push({ type: 'llm_fallback', payload: { reason: llm.reason, where: 'support-opener', kind: cls.kind } });
-      }
+      logLlmFallback(events, llm, 'support-opener');
       return turn(state, {
         messages: [msg(llm.say, 'care')],
         options: calmActions(),
@@ -587,22 +652,44 @@ async function handleText(store, child, state, text, events, onChunk) {
       c.noStreak += 1;
       if (c.noStreak >= 2) {
         state.phase = 'SUPPORT';
+        const fallbackLine = pick(LINES.calmOffer).replaceAll('{name}', child.nickname);
+        const llm = await composeFreeTurn(
+          {
+            task: { type: 'calm' },
+            child, store, input: text, history: (state.recent || []).slice(-6), scriptedFallback: fallbackLine,
+          },
+          onChunk,
+        );
+        remember(state, text, llm.say);
+        logLlmFallback(events, llm, 'calm-offer');
         return turn(state, {
-          messages: [msg(pick(LINES.calmOffer).replaceAll('{name}', child.nickname), 'care')],
+          messages: [msg(llm.say, 'care')],
           options: calmActions(),
           expect: { type: 'action' },
           lessonAction: 'break',
+          llm: llm.usedLLM, llmProvider: llm.provider || null,
           events,
         });
       }
+      const fallbackLine = 'That\'s okay! Do you want a little game, or a calm moment?';
+      const llm = await composeFreeTurn(
+        {
+          task: { type: 'noOffer' },
+          child, store, input: text, history: (state.recent || []).slice(-6), scriptedFallback: fallbackLine,
+        },
+        onChunk,
+      );
+      remember(state, text, llm.say);
+      logLlmFallback(events, llm, 'no-offer');
       return turn(state, {
-        messages: [msg('That\'s okay! Do you want a little game, or a calm moment?', 'care')],
+        messages: [msg(llm.say, 'care')],
         options: [
           { id: 'action-game', label: 'Game', emoji: '🎮', kind: 'action' },
           { id: 'action-breathe', label: 'Calm', emoji: '🫧', kind: 'action' },
         ],
         expect: { type: 'action' },
         lessonAction: 'retry',
+        llm: llm.usedLLM, llmProvider: llm.provider || null,
         events,
       });
     }
@@ -611,9 +698,18 @@ async function handleText(store, child, state, text, events, onChunk) {
       c.dontKnow += 1;
       if (c.dontKnow >= 2) {
         c.dontKnow = 0;
-        return supportCheckin(state, item, events);
+        return supportCheckin(store, child, state, item, events, onChunk);
       }
-      const line = pick(LINES.growthYet);
+      const fallbackLine = pick(LINES.growthYet);
+      const llm = await composeFreeTurn(
+        {
+          task: { type: 'growth', word: item?.text, emoji: item?.emoji },
+          child, store, input: text, history: (state.recent || []).slice(-6), scriptedFallback: fallbackLine,
+        },
+        onChunk,
+      );
+      remember(state, text, llm.say);
+      logLlmFallback(events, llm, 'growth');
       const two = item ? chipOptions(item, Math.random, 2) : state.lastOptions;
       if (item) {
         state.lastOptions = two;
@@ -621,12 +717,13 @@ async function handleText(store, child, state, text, events, onChunk) {
       }
       return turn(state, {
         messages: [
-          msg(line, 'care'),
+          msg(llm.say, 'care'),
           msg(item ? pick(LINES.modelShareNoFx).replaceAll('{word}', item.text).replaceAll('{emoji}', item.emoji) : 'Watch me first! 💛', 'cheer'),
         ],
         options: two,
         expect: state.expect,
         lessonAction: 'scaffold',
+        llm: llm.usedLLM, llmProvider: llm.provider || null,
         events,
       });
     }
@@ -762,7 +859,7 @@ function matchExpect(text, expect, item) {
 
 // ── Correct-answer pipeline ────────────────────────────────────────────────
 
-async function onCorrect(store, child, state, item, { via, match }, events) {
+async function onCorrect(store, child, state, item, { via, match, childText }, events, onChunk) {
   const c = state.counters;
   const firstTry = (state.current?.attempts || 0) === 0 && c.wrongOnItem === 0 && !c.idleCount;
   applyAnswer(store, child, item, true, firstTry);
@@ -819,11 +916,23 @@ async function onCorrect(store, child, state, item, { via, match }, events) {
   }
 
   const pool = firstTry ? LINES.praiseFirstTry : LINES.praiseCorrect;
-  const praise = pickArr(pool)
+  const fallbackPraise = pickArr(pool)
     .replaceAll('{word}', item.text.toUpperCase())
     .replaceAll('{fx}', item.fx || '')
     .replace(/\s+/g, ' ')
     .trim();
+  const praiseLlm = await composeFreeTurn(
+    {
+      task: { type: 'praise', word: item.text, emoji: item.emoji, firstTry },
+      child, store,
+      input: via === 'chip' ? 'I tapped it — I think it is right!' : (childText || item.text),
+      history: (state.recent || []).slice(-6), scriptedFallback: fallbackPraise,
+    },
+    onChunk,
+  );
+  remember(state, via === 'chip' ? `(tapped ${item.text} — correct!)` : (childText || item.text), praiseLlm.say);
+  logLlmFallback(events, praiseLlm, 'praise');
+  const praise = praiseLlm.say;
 
   // 5 fast correct → stretch injection (max 2)
   if (fast && c.fastCorrect >= 5 && state.plan?.stretch?.length && c.stretchUsed < 2) {
@@ -835,7 +944,14 @@ async function onCorrect(store, child, state, item, { via, match }, events) {
     state.current = { item: stretch, stage: 'stretch', attempts: 0, presentedAt: now() };
     state.lastOptions = opts;
     state.expect = { type: 'chip', answers: [stretch.id] };
-    const r = turn(state, { messages: [msg(praise, 'celebrate'), msg(line, 'cheer')], options: opts, expect: state.expect, lessonAction: 'advance', events });
+    const r = turn(state, {
+      messages: [msg(praise, 'celebrate'), msg(line, 'cheer')],
+      options: opts,
+      expect: state.expect,
+      lessonAction: 'advance',
+      llm: praiseLlm.usedLLM, llmProvider: praiseLlm.provider || null,
+      events,
+    });
     return applyStars(state, r, 1);
   }
 
@@ -846,6 +962,7 @@ async function onCorrect(store, child, state, item, { via, match }, events) {
     expect: advanced.expect,
     wordChips: advanced.wordChips || null,
     lessonAction: advanced.lessonAction || 'advance',
+    llm: praiseLlm.usedLLM, llmProvider: praiseLlm.provider || null,
     events,
   });
   return applyStars(state, r, 1);
@@ -1048,17 +1165,29 @@ function shuffle(arr) {
 
 // ── Check-in outcome → session start ────────────────────────────────────────
 
-function handleMood(store, child, state, chipId, events) {
+async function handleMood(store, child, state, chipId, events, onChunk) {
   const mood = chipId.replace('mood-', '');
   state.moodStart = mood;
   events.push({ type: 'mood', payload: { mood, phase: 'start' } });
 
+  const pool = mood === 'sad' ? LINES.moodMirrorSad : mood === 'sleepy' ? LINES.moodMirrorTired : LINES.moodMirrorHappy;
+  const fallbackLine = pick(pool).replaceAll('{name}', child.nickname);
+  const llm = await composeFreeTurn(
+    {
+      task: { type: 'mood', mood, moodLabel: mood === 'sad' ? 'a little sad' : mood, name: child.nickname },
+      child, store, input: `I feel ${mood === 'sad' ? 'a little sad' : mood}`,
+      history: (state.recent || []).slice(-6), scriptedFallback: fallbackLine,
+    },
+    onChunk,
+  );
+  remember(state, `I feel ${mood}`, llm.say);
+  logLlmFallback(events, llm, 'mood');
+
   if (mood === 'sad') {
-    const line = pick(LINES.moodMirrorSad).replaceAll('{name}', child.nickname);
     state.mode = 'support';
     state.sticky = 2;
     return turn(state, {
-      messages: [msg(line, 'care')],
+      messages: [msg(llm.say, 'care')],
       options: [
         { id: 'action-talk', label: 'Talk', emoji: '💬', kind: 'action' },
         { id: 'action-breathe', label: 'Breathe', emoji: '🫧', kind: 'action' },
@@ -1066,20 +1195,20 @@ function handleMood(store, child, state, chipId, events) {
       ],
       expect: { type: 'action' },
       lessonAction: 'break',
+      llm: llm.usedLLM, llmProvider: llm.provider || null,
       events,
     });
   }
 
-  const pool = mood === 'sleepy' ? LINES.moodMirrorTired : LINES.moodMirrorHappy;
-  const line = pick(pool).replaceAll('{name}', child.nickname);
   state.mode = 'learning';
   const start = startPlan(store, child, state, events);
   return turn(state, {
-    messages: [msg(line, mood === 'sleepy' ? 'calm' : 'cheer'), ...start.messages],
+    messages: [msg(llm.say, mood === 'sleepy' ? 'calm' : 'cheer'), ...start.messages],
     options: start.options,
     expect: start.expect,
     wordChips: start.wordChips || null,
     lessonAction: start.lessonAction || 'present',
+    llm: llm.usedLLM, llmProvider: llm.provider || null,
     events,
   });
 }
@@ -1138,9 +1267,7 @@ async function conversationTurn(store, child, state, text, events, onChunk) {
     onChunk,
   );
   remember(state, text, llm.say);
-  if (!llm.usedLLM && llm.reason && llm.reason !== 'no-keys') {
-    events.push({ type: 'llm_fallback', payload: { reason: llm.reason, where: 'conversation' } });
-  }
+  logLlmFallback(events, llm, 'conversation');
 
   const c = state.counters;
   const item = currentItem(state);
@@ -1202,9 +1329,7 @@ async function handleSupportText(store, child, state, text, events, onChunk) {
   );
   remember(state, text, llm.say);
   state.counters.tellMode = false;
-  if (!llm.usedLLM && llm.reason && llm.reason !== 'no-keys') {
-    events.push({ type: 'llm_fallback', payload: { reason: llm.reason, where: 'support-talk' } });
-  }
+  logLlmFallback(events, llm, 'support-talk');
   return turn(state, {
     messages: [msg(llm.say, 'care'), msg(pick(LINES.bravePraise), 'cheer'), msg(pick(LINES.afterCalmOffer), 'care')],
     options: afterCalmActions(),

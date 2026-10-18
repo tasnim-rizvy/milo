@@ -61,15 +61,18 @@ Freeze at the end of tonight's M0. Tomorrow, when behind, cut **top-down**:
 the P50/P95 table for the session.
 
 **Suites (run 3× each):**
-- **Suite A — 20 chip-answer turns** (scripted fast path; the common teaching turn).
-- **Suite B — 10 free-text turns** (LLM path, cold prompts).
-- **Suite C — 10 worst-case turns** (cold cache, longest child message, after 2 h idle, double-taps).
+- **Suite A — 20 chip-answer turns** (streamed praise/recast — the common teaching beat; measures the
+  full turn **and** the time to the first streamed word).
+- **Suite B — 10 free-text turns** (chat path, cold prompts — same two measures).
+- **Suite C — 10 worst-case turns** (cold start: session create + greeting + mood chip → first task).
 
-**Targets:** A: P50 ≈ 0.2 s / P95 ≤ 0.5 s · B: P50 ≤ 0.9 s / P95 ≤ 1.5 s · C: no turn > 1.8 s
-(fallback fires if the LLM exceeds its 1.2 s budget).
+**Targets:** first words P95 ≤ 1.1 s · A/B full turn P95 ≤ 1.5 s · C: no turn > 2.0 s
+(scripted twins answer instantly when the model can't serve; the fallback fires if the LLM exceeds
+its 1.2 s first-token budget).
 
-**Free-tier pacing:** Gemini free ≈10 req/min (Groq ≈30) — space Suite B turns (~7 s apart) so 429s
-don't skew P95. In the product, a 429 is a silent failover event, never something the child sees.
+**Free-tier pacing:** Gemini free ≈10 req/min (Groq ≈30) — space the LLM-heavy suites so 429s
+don't skew P95 (a 429 is a silent failover to the scripted twin, still under budget — the child
+never sees an error). The tools report how many turns were actually LLM-served (`llm_used`).
 
 **Tuning checklist (apply in order):** scripted fast-path coverage check → max-output-token cap →
 learner-card trim (≤400 tokens) → stream first sentence only → region check → chip double-tap guard.
@@ -102,7 +105,7 @@ provable in one demo click even if the live session starts at L1.
 | 1:20–1:45 | Type "i'm tired…" → chip →💚, Calm Corner breathing, recovery offer, difficulty drop | R2, R3 |
 | 1:45–2:15 | Load preloaded mid-L2 profile: Milo references yesterday's duck + asks about the blue dino → level proof + graduation overlay | R1, R4 |
 | 2:15–2:40 | Edge-case montage: typo "elefant" recast · off-topic cat detour → bridged · "I'm bored" → stretch word · home-language bridge line | R2, R3, robustness |
-| 2:40–3:00 | Close: latency table on screen (chip ≈0.2 s / text ≈0.9 s). "Kill the LLM and it still teaches" — optionally kill the key live, show scripted mode | R5, robustness |
+| 2:40–3:00 | Close: latency table on screen (first words ≈0.6–0.9 s, full replies ≈1.0 s p95, scripted twins ≈10–70 ms). "Kill the LLM and it still teaches" — optionally kill the key live, show scripted mode | R5, robustness |
 
 **Fallbacks during recording:** **LLM-off scripted toggle** (prove the hybrid story instead of
 failing) · pre-recorded backup video of each critical beat · chips-only path if anything else

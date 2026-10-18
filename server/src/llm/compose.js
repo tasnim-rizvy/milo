@@ -1,7 +1,8 @@
 // Composer (docs/02 §5–6): phrasing, free conversation, empathy lines.
-// The engine owns pedagogy; the LLM only warms the language. Hard rules are
-// enforced programmatically after generation (sanitizer), and the scripted
-// fallback is always ready — the child never waits, never sees an error.
+// The engine owns pedagogy; the LLM only warms the language. Every LLM-backed
+// turn ships with a "turn brief" (what the moment must say) and a scripted twin
+// that serves whenever the model is unavailable or its line fails the
+// programmatic checks — the child never waits, never sees an error.
 import { llmProviders, config } from '../config.js';
 import { streamGemini, streamGroq } from './providers.js';
 import { sanitizeModelText } from '../engine/safety.js';
@@ -53,29 +54,110 @@ export function buildLearnerCard(child, store) {
   ].filter(Boolean).join('\n');
 }
 
-// Build the single user message: learner card + mode + recent chat + new line.
-export function buildChatPrompt({ card, mode, input, history = [] }) {
-  const modeLine = mode === 'support'
-    ? 'The child is upset or sharing feelings. Comfort first, zero teaching, gentle and short.'
-    : 'The child is chatting. Be curious and playful, keep it very short.';
-  const recent = history.length
-    ? `Recent chat (oldest first — never repeat your last line's topic or question):\n${history
-      .map((m) => `${m.role === 'milo' ? 'Milo' : 'Child'}: ${m.text}`)
-      .join('\n')}\n`
-    : '';
-  return `${card}\n\n${modeLine}\n${recent}Child said: "${String(input).slice(0, 200)}"`;
+// ── Turn briefs ─────────────────────────────────────────────────────────────
+// The engine knows exactly what a moment must say (a word was missed, the child
+// is stuck, the mood was sad…). The brief gives the model the facts and the
+// shape of the reply — it only finds warmer words; it never decides pedagogy.
+
+const singleToken = (w) => !!w && !/[\s']/.test(w);
+
+// Words the model's line MUST contain for the pedagogy to stay on track.
+export function mustWords(task) {
+  if (!task) return [];
+  if (task.type === 'praise' || task.type === 'recast') return singleToken(task.word) ? [task.word] : [];
+  if (task.type === 'scaffold' && ['show', 'simpler'].includes(task.step)) return singleToken(task.word) ? [task.word] : [];
+  return [];
 }
 
-// Compose one free/LLM-backed line. onChunk(text) streams tokens to the client.
-// The returned `reason` is set when the scripted fallback served instead:
-// 'no-keys' | 'error' | 'rejected' (safety filter) — logged by the engine so a
-// scripted reply is never a mystery.
-export async function composeFreeTurn({ mode, child, store, input, history = [], scriptedFallback }, onChunk = null) {
+function taskDirective(task) {
+  const word = task?.word ? `"${task.word}"` : '';
+  const emoji = task?.emoji ? ` ${task.emoji}` : '';
+  const must = mustWords(task).length ? ` Include the word ${word}.` : '';
+  switch (task?.type) {
+    case 'praise':
+      return `Right now: the child just got ${word}${emoji} right${task.firstTry ? ' on the FIRST try' : ' after trying again'}. Cheer for them in one short message.${must} No question — just the cheer, the next task pops up right after. Sound different from your recent lines.`;
+    case 'recast':
+      return `Right now: the child tapped "${task.tapped}" but the right answer is ${word}${emoji}. Kindly point to ${word} and invite the child to find it.${must} Never say the word "wrong", never scold. Do not suggest other games.`;
+    case 'growth':
+      return 'Right now: the child says they do not know / cannot do it. Reassure them warmly: hard words need practice, "yet" means it is coming, you will do it together. No question, no games — one short message.';
+    case 'checkin':
+      return 'Right now: the child missed a few answers in a row. Say gently: it is okay to not know, and now you will show the word together. No question, no game suggestions, no activities — one short message.';
+    case 'calm':
+      return 'Right now: the child has said no more than once. Gently offer a calm moment together — a breathing break, talking with you, or saying bye are the buttons below. Comfort first, no games, no question — one short message.';
+    case 'noOffer':
+      return 'Right now: the child said no. Gently offer two choices: a little game, or a calm moment — those are the two buttons below. No other suggestions, no question — one short message.';
+    case 'mood':
+      return `Right now: the check-in chips are on screen and the child tapped "I feel ${task.moodLabel}". Mirror that feeling warmly${task.mood === 'sad' ? '; gently remind them they can talk to you, take a breathing break, or play something soft — those are the buttons below' : ' and say you will start right away'}. No question — one short message, the buttons come next.`;
+    case 'greeting':
+      return `Right now: a brand-new session starts. Greet ${task.name} by name warmly and ask how they feel today. One short message.`;
+    case 'scaffold': {
+      if (task.step === 'simpler') return `Right now: the child is stuck on ${word}${emoji}. Make it easier: say you will show just two choices, then ask which one is ${word}.${must} One short message.`;
+      if (task.step === 'hint') return `Right now: the child is still stuck on ${word}${emoji}. Give one gentle hint: the word starts with the letter "${task.letter}". One short message.`;
+      if (task.step === 'show') return `Right now: the child is stuck on ${word}${emoji}. Simply show the answer — it is ${word}${emoji} — and invite the child to tap it.${must} One short message.`;
+      return `Right now: the child stayed stuck on ${word || 'this one'}${emoji}. Gently say you will meet this word again another day (no pressure at all), then move to something fun. One short message.`;
+    }
+    default:
+      return '';
+  }
+}
+
+// Build the single user message: learner card + brief/mode + recent chat + new line.
+export function buildChatPrompt({ card, mode, input, history = [], task = null }) {
+  const lines = [card];
+  const directive = task ? taskDirective(task) : '';
+  if (directive) {
+    lines.push(directive);
+  } else {
+    lines.push(mode === 'support'
+      ? 'The child is upset or sharing feelings. Comfort first, zero teaching, gentle and short. Do not suggest games or activities — the next buttons offer breathe, talk, or bye. At most one gentle question about their feeling.'
+      : 'The child is chatting. Be curious and playful, keep it very short.');
+  }
+  if (history.length) {
+    lines.push(`Recent chat (oldest first — never repeat your last line's topic or question):\n${history
+      .map((m) => `${m.role === 'milo' ? 'Milo' : 'Child'}: ${m.text}`)
+      .join('\n')}`);
+  }
+  if (String(input || '').trim()) lines.push(`Child said: "${String(input).slice(0, 200)}"`);
+  return lines.join('\n\n');
+}
+
+const norm = (s) => String(s || '')
+  .toLowerCase()
+  .replace(/[\u2019']/g, '')
+  .replace(/[^a-z0-9 ]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+// Task types that must NOT end in a question — the next bubble/task follows
+// immediately, so a question would dangle (a leftover "Want to play?" misleads
+// the child into answering something the UI doesn't offer).
+const QUIET_TASKS = new Set(['praise', 'growth', 'checkin', 'mood']);
+
+// Programmatic checks on top of the sanitizer, per turn brief. Any failed
+// check sends the scripted twin instead — a scripted line is never a mystery.
+export function taskViolations(task, text, history = []) {
+  const out = [];
+  const t = String(text || '');
+  if (!t.trim()) out.push('empty');
+  if (task && /\bwrong\b/i.test(t)) out.push('says-wrong');
+  if (task && QUIET_TASKS.has(task.type) && /\?/.test(t)) out.push('asks-question');
+  for (const w of mustWords(task)) {
+    if (!norm(t).includes(norm(w))) out.push(`missing:"${w}"`);
+  }
+  const lastMilo = [...history].reverse().find((m) => m.role === 'milo')?.text;
+  if (lastMilo && norm(lastMilo) === norm(t)) out.push('repeats-last-line');
+  return out;
+}
+
+// Compose one LLM-backed line (free chat, a feelings reply, or a briefed
+// micro-moment). The returned `reason` is set when the scripted twin served:
+// 'no-keys' | 'error' | 'rejected' (safety filter or a failed brief check).
+export async function composeFreeTurn({ mode, task = null, child, store, input, history = [], scriptedFallback }, onChunk = null) {
   const providers = llmProviders();
   if (!providers.length) return { say: scriptedFallback, usedLLM: false, ms: 0, reason: 'no-keys' };
 
   const card = buildLearnerCard(child, store);
-  const user = buildChatPrompt({ card, mode, input, history });
+  const user = buildChatPrompt({ card, mode, input, history, task });
 
   const started = Date.now();
   for (const provider of providers) {
@@ -92,7 +174,11 @@ export async function composeFreeTurn({ mode, child, store, input, history = [],
       }
       const clean = sanitizeModelText(text, scriptedFallback);
       if (clean.replaced && clean.text === scriptedFallback) {
-        return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started, provider: provider.name, reason: 'rejected' };
+        return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started, provider: provider.name, reason: 'rejected', detail: 'safety-filter' };
+      }
+      const bad = taskViolations(task, clean.text, history);
+      if (bad.length) {
+        return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started, provider: provider.name, reason: 'rejected', detail: bad.join(' · ') };
       }
       return { say: clean.text, usedLLM: true, ms: Date.now() - started, provider: provider.name };
     } catch {

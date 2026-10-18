@@ -60,3 +60,42 @@ export async function sseSend(sessionId, input) {
   }
   return { ms, turn };
 }
+
+// Like sseSend, but also records the first streamed token (`ttft`): the moment
+// the child first sees words. Falls back to the full round trip when the
+// scripted safety net served (no chunks), because then the whole turn is the
+// first content.
+export async function sseSendTimed(sessionId, input) {
+  return new Promise((resolve, reject) => {
+    const t0 = performance.now();
+    const payload = JSON.stringify({ sessionId, input });
+    const req = http.request(
+      {
+        host: HOST, port: PORT, path: '/api/message', method: 'POST', agent,
+        headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) },
+      },
+      (res) => {
+        let data = '';
+        let first = null;
+        res.setEncoding('utf8');
+        res.on('data', (c) => {
+          data += c;
+          if (first === null && data.includes('event: chunk')) first = performance.now() - t0;
+        });
+        res.on('end', () => {
+          let turn = null;
+          for (const frame of data.split('\n\n')) {
+            if (!frame.startsWith('event: turn')) continue;
+            const line = frame.split('\n').find((l) => l.startsWith('data:'));
+            if (line) turn = JSON.parse(line.slice(5));
+          }
+          const ms = performance.now() - t0;
+          resolve({ ms, ttft: first === null ? ms : first, turn });
+        });
+      },
+    );
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}

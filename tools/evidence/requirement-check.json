@@ -1,6 +1,6 @@
 {
-  "base": "http://localhost:3002",
-  "ranAt": "2026-10-17T21:11:20.647Z",
+  "base": "http://localhost:3001",
+  "ranAt": "2026-10-18T04:15:20.772Z",
   "checks": [
     {
       "id": "R1",
@@ -76,21 +76,27 @@
     },
     {
       "id": "R5",
-      "name": "chip turns p95 ≤ 500 ms",
+      "name": "chip turns (full, streamed) p95 ≤ 1500 ms",
       "pass": true,
-      "detail": "p95=155ms"
+      "detail": "p95=973.8ms llm=18/19"
+    },
+    {
+      "id": "R5",
+      "name": "first words p95 ≤ 1100 ms (streamed)",
+      "pass": true,
+      "detail": "A=938.1ms B=707.3ms"
     },
     {
       "id": "R5",
       "name": "text turns p95 ≤ 1500 ms",
       "pass": true,
-      "detail": "p95=33.5ms"
+      "detail": "p95=745.9ms"
     },
     {
       "id": "R5",
       "name": "all turns < 2 s product budget",
       "pass": true,
-      "detail": "max=133.3ms"
+      "detail": "max=1290.3ms"
     },
     {
       "id": "SAFE",

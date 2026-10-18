@@ -120,7 +120,11 @@ async function main() {
     const latFile = join(EVID, 'latency.json');
     if (existsSync(latFile)) {
       const lat = JSON.parse(readFileSync(latFile, 'utf8'));
-      ok('R5', 'chip turns p95 ≤ 500 ms', lat.suites.A_chip20.p95 <= 500, `p95=${lat.suites.A_chip20.p95}ms`);
+      const missing = 9e9; // a missing ttft section fails the check loudly
+      ok('R5', 'chip turns (full, streamed) p95 ≤ 1500 ms', lat.suites.A_chip20.p95 <= 1500,
+        `p95=${lat.suites.A_chip20.p95}ms llm=${lat.suites.A_chip20.llm_used}`);
+      ok('R5', 'first words p95 ≤ 1100 ms (streamed)', (lat.suites.A_chip20.ttft?.p95 ?? missing) <= 1100 && (lat.suites.B_text10.ttft?.p95 ?? missing) <= 1100,
+        `A=${lat.suites.A_chip20.ttft?.p95}ms B=${lat.suites.B_text10.ttft?.p95}ms`);
       ok('R5', 'text turns p95 ≤ 1500 ms', lat.suites.B_text10.p95 <= 1500, `p95=${lat.suites.B_text10.p95}ms`);
       ok('R5', 'all turns < 2 s product budget', lat.suites.C_worst10.max < 2000, `max=${lat.suites.C_worst10.max}ms`);
     } else {
