@@ -51,3 +51,28 @@ test('recent chat goes into the prompt so Milo can avoid repeating himself', asy
   const none = buildChatPrompt({ card: 'c', mode: 'conversation', input: 'hi' });
   assert.doesNotMatch(none, /Recent chat/);
 });
+
+// ── Fallback reasons (observability: a scripted line is never a mystery) ───
+
+test('composeFreeTurn reports why the scripted fallback served (no keys)', async () => {
+  const { composeFreeTurn } = await import('../src/llm/compose.js');
+  const r = await composeFreeTurn({
+    mode: 'support',
+    child: {
+      nickname: 'Maya', level: 1, reading_band: 'tap-first', age_band: 4,
+      interests: [], home_language: '', last_summary: '',
+    },
+    store: { progressAll: () => [] },
+    input: "i'm tired",
+    scriptedFallback: 'fallback line',
+  });
+  assert.equal(r.usedLLM, false);
+  assert.equal(r.reason, 'no-keys');
+  assert.equal(r.say, 'fallback line');
+});
+
+test('support prompt forbids mentioning family back and faking sad feelings', async () => {
+  const { SYSTEM_PROMPT } = await import('../src/llm/compose.js');
+  assert.match(SYSTEM_PROMPT, /Never mention family members back/);
+  assert.match(SYSTEM_PROMPT, /Never say you feel sad or happy about the child's feelings/);
+});

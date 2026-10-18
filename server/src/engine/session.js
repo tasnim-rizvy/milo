@@ -1,7 +1,8 @@
 // Dialog manager (docs/02 §5): HOME → GREET → CHECK-IN → REVIEW → TEACH
 // (model → join-in → independent) → PLAY → CELEBRATE → WRAP-UP, with
 // CONVERSATION (≤3 turns) and SUPPORT_CALM interrupts. SUPPORT preempts
-// everything; chip answers never wait on an LLM; "wrong" is never said.
+// everything; chip answers never wait on an LLM; feelings turns stream from
+// the LLM with the scripted bank as the safety net; "wrong" is never said.
 import { matchAnswer, containsAny, normalize } from './matching.js';
 import { classifySafety, SAFETY_REDIRECTS } from './safety.js';
 import { classifyInput, nextMode } from './modes.js';
@@ -551,18 +552,33 @@ async function handleText(store, child, state, text, events, onChunk) {
   if (prevMode !== state.mode) events.push({ type: 'mode_switch', payload: { from: prevMode, to: state.mode, reason: cls.kind } });
 
   switch (cls.kind) {
+    // Feelings & stop signals: SUPPORT preempts teaching. These are "feelings
+    // turns" — Groq phrases the comfort (streaming), and the scripted
+    // calm-offer line is the safety net when the model fails or its output
+    // gets rejected by the filter. Chips stay deterministic either way.
     case 'stop':
     case 'upset':
     case 'cant':
     case 'repeated-no': {
       c.noStreak += 1;
       state.phase = 'SUPPORT';
-      const line = cls.kind === 'cant' ? pick(LINES.growthYet) : pick(LINES.calmOffer).replaceAll('{name}', child.nickname);
+      const fallbackLine = cls.kind === 'cant'
+        ? pick(LINES.growthYet)
+        : pick(LINES.calmOffer).replaceAll('{name}', child.nickname);
+      const llm = await composeFreeTurn(
+        { mode: 'support', child, store, input: text, history: (state.recent || []).slice(-6), scriptedFallback: fallbackLine },
+        onChunk,
+      );
+      remember(state, text, llm.say);
+      if (!llm.usedLLM && llm.reason && llm.reason !== 'no-keys') {
+        events.push({ type: 'llm_fallback', payload: { reason: llm.reason, where: 'support-opener', kind: cls.kind } });
+      }
       return turn(state, {
-        messages: [msg(line, 'care')],
+        messages: [msg(llm.say, 'care')],
         options: calmActions(),
         expect: { type: 'action' },
         lessonAction: 'break',
+        llm: llm.usedLLM, llmProvider: llm.provider || null,
         events,
       });
     }
@@ -1122,6 +1138,9 @@ async function conversationTurn(store, child, state, text, events, onChunk) {
     onChunk,
   );
   remember(state, text, llm.say);
+  if (!llm.usedLLM && llm.reason && llm.reason !== 'no-keys') {
+    events.push({ type: 'llm_fallback', payload: { reason: llm.reason, where: 'conversation' } });
+  }
 
   const c = state.counters;
   const item = currentItem(state);
@@ -1183,6 +1202,9 @@ async function handleSupportText(store, child, state, text, events, onChunk) {
   );
   remember(state, text, llm.say);
   state.counters.tellMode = false;
+  if (!llm.usedLLM && llm.reason && llm.reason !== 'no-keys') {
+    events.push({ type: 'llm_fallback', payload: { reason: llm.reason, where: 'support-talk' } });
+  }
   return turn(state, {
     messages: [msg(llm.say, 'care'), msg(pick(LINES.bravePraise), 'cheer'), msg(pick(LINES.afterCalmOffer), 'care')],
     options: afterCalmActions(),

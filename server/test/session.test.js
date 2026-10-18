@@ -153,6 +153,20 @@ test('upset preempts teaching: "i dont want to" → SUPPORT → breathe → easy
   assert.equal(easy.mode, 'engagement');
 });
 
+test('feelings turn is LLM-shaped: scripted safety net + calm options when no keys', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  const child = store.child('maya');
+  const { id } = createSession(store, child, 'learn');
+  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+
+  const t = await handleInput(store, child, id, { type: 'text', text: "i'm tired" });
+  assert.equal(t.mode, 'support');
+  assert.equal(t.dev.llm, false, 'no keys in tests → scripted fallback serves');
+  assert.ok(t.options.some((o) => o.id === 'action-breathe'), 'calm options still ship');
+  assert.ok(!t.events.some((e) => e.type === 'llm_fallback'), 'no-keys is not a fallback event');
+});
+
 test('"i want to play" switches to 🎮 engagement with chips', async () => {
   const store = openStore(':memory:');
   seedDemo(store);

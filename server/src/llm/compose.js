@@ -16,11 +16,16 @@ The child's "Loves" list is background — mention a like only now and then, not
 If the child is sad or upset: comfort first, no teaching at all.
 Never ask for or repeat personal information (full name, address, school, phone).
 Never mention parents or grown-ups. Never say "wrong".
+The child may talk about family (dad, mom, brother, grandma…). Never mention family members back and never tell the child to talk to anyone — comfort the child's feeling only.
+Never say you feel sad or happy about the child's feelings — say you are sorry they feel that way, or that the feeling is okay.
 If you are not sure what the child meant, ask ONE simple question with two choices — never guess that they are sleepy, sad, or playing.
 If the child says they do not want to study or learn, cheerfully offer a quick game instead.
 You may be playful, curious, and forgetful (kids like helping you).
 Always keep the child talking or playing: end with a tiny question or invitation.
 Output plain text only — no quotes, no markdown.`;
+
+// Exported for tests: the hard prompt rules are part of the safety story.
+export const SYSTEM_PROMPT = SYSTEM;
 
 export function buildLearnerCard(child, store) {
   const pm = new Map(store.progressAll(child.key).map((p) => [p.item_id, p]));
@@ -62,9 +67,12 @@ export function buildChatPrompt({ card, mode, input, history = [] }) {
 }
 
 // Compose one free/LLM-backed line. onChunk(text) streams tokens to the client.
+// The returned `reason` is set when the scripted fallback served instead:
+// 'no-keys' | 'error' | 'rejected' (safety filter) — logged by the engine so a
+// scripted reply is never a mystery.
 export async function composeFreeTurn({ mode, child, store, input, history = [], scriptedFallback }, onChunk = null) {
   const providers = llmProviders();
-  if (!providers.length) return { say: scriptedFallback, usedLLM: false, ms: 0 };
+  if (!providers.length) return { say: scriptedFallback, usedLLM: false, ms: 0, reason: 'no-keys' };
 
   const card = buildLearnerCard(child, store);
   const user = buildChatPrompt({ card, mode, input, history });
@@ -84,12 +92,12 @@ export async function composeFreeTurn({ mode, child, store, input, history = [],
       }
       const clean = sanitizeModelText(text, scriptedFallback);
       if (clean.replaced && clean.text === scriptedFallback) {
-        return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started, provider: provider.name };
+        return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started, provider: provider.name, reason: 'rejected' };
       }
       return { say: clean.text, usedLLM: true, ms: Date.now() - started, provider: provider.name };
     } catch {
       // fall through to the next provider
     }
   }
-  return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started };
+  return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started, reason: 'error' };
 }
