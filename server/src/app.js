@@ -135,15 +135,16 @@ export async function buildApp(opts = {}) {
     const { childKey = 'maya', intent = 'learn' } = req.body || {};
     const child = store.child(childKey);
     if (!canUse(child, deviceOf(req))) return reply.code(404).send({ error: 'no such child' });
-    const { id, turn } = createSession(store, child, intent);
+    const { id, turn, opener } = createSession(store, child, intent, { deterministic: demoOn });
     // AI-warm the very first line (greeting or calm-corner opener). The scripted
     // line is already in place as the fallback — a slow model never delays the
     // session beyond its budget. One action → one bubble: it stays ONE message.
+    // For a greeting the AI phrases only the hello; the opener's own question
+    // (mood ask or wonder puzzle, matching the chips) is pinned verbatim at the end.
     if (turn.messages?.length) {
-      const missed = intent !== 'calm' && !!(child.last_seen && Date.now() - child.last_seen > 20 * 3600e3);
       const task = intent === 'calm'
         ? { type: 'calm' }
-        : { type: 'greeting', name: child.nickname, missed };
+        : { type: 'greeting', name: child.nickname, missed: !!opener?.missed, ...(opener?.tail ? { endWith: opener.tail } : {}) };
       const llm = await composeFreeTurn({
         task, child, store, input: '', history: [],
         scriptedFallback: turn.messages[0].say,

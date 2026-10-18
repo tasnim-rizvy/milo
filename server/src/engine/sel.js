@@ -16,14 +16,19 @@ export function pick(pool, rng = Math.random) {
 }
 
 export const LINES = {
-  // #1 session start — mood check-in
-  greetWithCheckin: [
-    'Hi {name}! How do you feel today? 🦊',
-    'Hello {name}! Milo is happy to see you! How do you feel? 💛',
-    'Hi hi {name}! Before we play — how do you feel today? 🌟',
-    '{name}! Yay, you came! How do you feel right now? 🎈',
+  // #1 session start — a warm hello (the opener's own question follows it)
+  greetHeads: [
+    'Hi {name}!',
+    'Hello {name}! Milo is happy to see you!',
+    'Hi hi {name}!',
+    '{name}! Yay, you came!',
+    'Look who is here — {name}! 🌟',
+    'Hey {name}! My tail is wagging!',
   ],
-  moodOptions: ['😊 happy', '😴 sleepy', '😢 a little sad'],
+  missedYou: [
+    'I missed you, {name}! I kept our words warm. 🦊',
+    'You came back! I kept your words safe. 🦊',
+  ],
 
   moodMirrorHappy: [
     'Happy! Me too — my tail is wagging. High five! 🖐️',
@@ -279,9 +284,11 @@ export const LINES = {
   // conversation mode
   conversationOpeners: [
     'Tell me everything! What does it look like? 👀',
-    'I want to know more! What else? 😄',
     'Ooh! And then what happened? 🌟',
-    'Wow! Tell me one more thing about it!',
+    'What if it could talk? What would it say? 🤭',
+    'Is it big or small? Show me with your arms! 🙌',
+    'Guess what? I have a secret wish: to fly! What is yours? ✨',
+    'Which color is it? I want to picture it! 🎨',
   ],
   bridgeBack: [
     'I love that! Now — quick, what\'s this? {emoji}',
@@ -401,7 +408,72 @@ export const LINES = {
 // Conversation-mode reply for free chat (scripted fallback when LLM is off).
 export const CHAT_SCRIPTED = [
   'Wow, tell me more! What else? 😄',
-  'That\'s so cool! I love it. What happened next?',
-  'Ooh! Milo\'s tail is wagging. Tell me one more thing!',
-  'Amazing! I could listen all day. What else can you tell me?',
+  'That\'s so cool! Did you know a fox can jump super high? 🦊',
+  'Ooh! Milo\'s tail is wagging. What would you do next?',
+  'I love that! Guess what — my favorite color is orange. What is yours? 🧡',
+  'Amazing! I wonder what it feels like. Soft or bumpy? 🤔',
+  'Ha ha, that is funny! Let\'s pretend we are birds. Flap flap! 🐦',
+  'Oooh! If you had a magic wand, what would you make? ✨',
+  'Super! Here is a Milo fact: stars are really far away. ⭐ Can you count to three with me?',
 ];
+
+// Session openers. Mood is asked in three child-friendly styles (the chips keep the
+// engine ids mood-happy / mood-sleepy / mood-sad, so nothing downstream changes).
+export const MOOD_STYLES = [
+  {
+    id: 'plain',
+    asks: ['How do you feel today? 🦊', 'How do you feel right now? 🎈', 'How are you feeling today? 💛'],
+    chips: [
+      { id: 'mood-happy', label: 'happy', emoji: '😊' },
+      { id: 'mood-sleepy', label: 'sleepy', emoji: '😴' },
+      { id: 'mood-sad', label: 'a little sad', emoji: '😢' },
+    ],
+  },
+  {
+    id: 'weather',
+    asks: ['What is the weather inside you today? 🌤️', 'Is it sunny or rainy inside you today? 🌈'],
+    chips: [
+      { id: 'mood-happy', label: 'sunny', emoji: '☀️' },
+      { id: 'mood-sleepy', label: 'sleepy moon', emoji: '🌙' },
+      { id: 'mood-sad', label: 'rainy', emoji: '🌧️' },
+    ],
+  },
+  {
+    id: 'animal',
+    asks: ['Which animal are you today? 🐾', 'Are you a bunny, a bear, or a mouse today? 🐾'],
+    chips: [
+      { id: 'mood-happy', label: 'bouncy bunny', emoji: '🐰' },
+      { id: 'mood-sleepy', label: 'sleepy bear', emoji: '🐻' },
+      { id: 'mood-sad', label: 'quiet mouse', emoji: '🐭' },
+    ],
+  },
+];
+
+// "Wonder" openers: a tiny guess-it question with two picture choices. There is no
+// wrong pick — both get a warm reveal with the true fact (curiosity + confidence,
+// and the child's first English words of the day).
+export const WONDER_INTROS = [
+  'Guess what?',
+  'I have a little puzzle for you!',
+  'Ooh, I wonder…',
+  'Quick, brave thinker —',
+];
+export const WONDERS = [
+  { id: 'bigger', tags: ['animals'], q: 'Which one is BIGGER?', a: { emoji: '🐘', label: 'elephant' }, b: { emoji: '🐭', label: 'mouse' }, answer: 'a', fact: 'An elephant is huge — bigger than a car!' },
+  { id: 'fly', tags: ['animals'], q: 'Who can FLY high?', a: { emoji: '🦅', label: 'eagle' }, b: { emoji: '🐢', label: 'turtle' }, answer: 'a', fact: 'An eagle flies high in the sky!' },
+  { id: 'sea', tags: ['animals'], q: 'Who lives in the SEA?', a: { emoji: '🐠', label: 'fish' }, b: { emoji: '🐪', label: 'camel' }, answer: 'a', fact: 'Fish live in the sea and swim all day!' },
+  { id: 'fast', tags: ['animals', 'sports'], q: 'Who runs FASTER?', a: { emoji: '🐆', label: 'cheetah' }, b: { emoji: '🐌', label: 'snail' }, answer: 'a', fact: 'A cheetah is super fast. A snail is super slow!' },
+  { id: 'night', tags: ['space'], q: 'What shines at NIGHT?', a: { emoji: '🌙', label: 'moon' }, b: { emoji: '☀️', label: 'sun' }, answer: 'a', fact: 'The moon and the stars shine at night!' },
+  { id: 'stripes', tags: ['animals'], q: 'Who has STRIPES?', a: { emoji: '🦓', label: 'zebra' }, b: { emoji: '🐘', label: 'elephant' }, answer: 'a', fact: 'A zebra has black and white stripes!' },
+  { id: 'cold', tags: [], q: 'Which one is COLD?', a: { emoji: '❄️', label: 'snow' }, b: { emoji: '🔥', label: 'fire' }, answer: 'a', fact: 'Snow is cold. Fire is hot!' },
+  { id: 'loud', tags: ['animals', 'music'], q: 'Who is LOUD?', a: { emoji: '🦁', label: 'lion' }, b: { emoji: '🐭', label: 'mouse' }, answer: 'a', fact: 'A lion roars so loud! A mouse squeaks softly.' },
+  { id: 'rocket', tags: ['space', 'cars', 'robots'], q: 'What goes to SPACE?', a: { emoji: '🚀', label: 'rocket' }, b: { emoji: '🚗', label: 'car' }, answer: 'a', fact: 'A rocket goes up to space — whoosh!' },
+  { id: 'dino', tags: ['dinosaurs'], q: 'Which one is a DINOSAUR?', a: { emoji: '🦖', label: 'dinosaur' }, b: { emoji: '🐶', label: 'dog' }, answer: 'a', fact: 'Dinosaurs lived a very, very long time ago!' },
+  { id: 'music', tags: ['music'], q: 'What makes MUSIC?', a: { emoji: '🎸', label: 'guitar' }, b: { emoji: '🥄', label: 'spoon' }, answer: 'a', fact: 'A guitar makes music. Strum, strum!' },
+  { id: 'kick', tags: ['sports'], q: 'What do we KICK?', a: { emoji: '⚽', label: 'ball' }, b: { emoji: '🍎', label: 'apple' }, answer: 'a', fact: 'We kick a ball. Goal!' },
+  { id: 'draw', tags: ['drawing'], q: 'What do we DRAW with?', a: { emoji: '✏️', label: 'pencil' }, b: { emoji: '🍌', label: 'banana' }, answer: 'a', fact: 'We draw with a pencil. Scribble, scribble!' },
+  { id: 'meow', tags: ['cats'], q: 'Who says MEOW?', a: { emoji: '🐱', label: 'cat' }, b: { emoji: '🐶', label: 'dog' }, answer: 'a', fact: 'A cat says meow!' },
+  { id: 'woof', tags: ['dogs'], q: 'Who says WOOF?', a: { emoji: '🐶', label: 'dog' }, b: { emoji: '🐱', label: 'cat' }, answer: 'a', fact: 'A dog says woof!' },
+];
+export const WONDER_RIGHT = ['Yes!', 'You got it!', 'Great pick!', 'Ooh, nice one!'];
+export const WONDER_TRY = ['Good guess!', 'Fun pick!', 'Ooh, I like that one!'];

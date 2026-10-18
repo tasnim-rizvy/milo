@@ -8,7 +8,7 @@
 import { matchAnswer, containsAny, normalize } from './matching.js';
 import { classifySafety, SAFETY_REDIRECTS } from './safety.js';
 import { classifyInput, nextMode } from './modes.js';
-import { LINES, CHAT_SCRIPTED, pick } from './sel.js';
+import { LINES, CHAT_SCRIPTED, MOOD_STYLES, WONDERS, WONDER_INTROS, WONDER_RIGHT, WONDER_TRY, pick } from './sel.js';
 import {
   applyAnswer, buildPlan, buildStageCheck, chipOptions, gateReady,
   itemById, itemsOfTheme, stageCheckVerdict, weakestItems,
@@ -78,6 +78,7 @@ function snapshot(state) {
     startedAt: state.startedAt,
     lastActivity: state.lastActivity,
     moodStart: state.moodStart,
+    wonder: state.wonder || null,
     moodEnd: state.moodEnd,
     ended: state.ended,
     lastOptions: state.lastOptions,
@@ -139,7 +140,29 @@ const partsOf = (t) => ({
 
 // ── Session lifecycle ───────────────────────────────────────────────────────
 
-export function createSession(store, child, intent = 'learn') {
+// How a session opens. Asking "how do you feel?" every single time gets stale, so
+// the opener rotates: a varied mood check (weather / animal / plain) or a tiny
+// "wonder" guess-it question with a fun-fact reveal. A mood check is always used for
+// a first visit, after a long gap, or when last time ended sad. (`deterministic`
+// pins the plain mood opener — demo mode and the evidence tools rely on it.)
+function chooseOpener(store, child, deterministic, force = '') {
+  const plain = { kind: 'mood', style: MOOD_STYLES[0] };
+  if (force === 'wonder') return { kind: 'wonder', wonder: pick(WONDERS) };
+  const styled = MOOD_STYLES.find((m) => m.id === force);
+  if (styled) return { kind: 'mood', style: styled };
+  if (deterministic) return plain;
+  const lastEnd = /end: (\w+)/.exec(child.last_summary || '')?.[1];
+  const mustCheck = !child.last_seen || lastEnd === 'sad' || now() - child.last_seen > 3 * 86400e3;
+  if (!mustCheck && Math.random() < 0.6) {
+    const seen = store.recentEvents(child.key, 60).filter((e) => e.type === 'wonder_shown').map((e) => e.payload?.id);
+    const fresh = WONDERS.filter((w) => w.id !== seen[0]);
+    const liked = fresh.filter((w) => w.tags.some((t) => (child.interests || []).includes(t)));
+    return { kind: 'wonder', wonder: pick(liked.length && Math.random() < 0.6 ? liked : fresh) };
+  }
+  return { kind: 'mood', style: pick(MOOD_STYLES) };
+}
+
+export function createSession(store, child, intent = 'learn', { deterministic = true, openerKind = '' } = {}) {
   const state = {
     phase: 'CHECKIN',
     intent,
@@ -174,6 +197,7 @@ export function createSession(store, child, intent = 'learn') {
   store.addEvent(id, child.key, 'session_start', { intent, level: child.level });
 
   let first;
+  let opener = null;
   if (intent === 'calm') {
     state.phase = 'SUPPORT';
     first = turn(state, {
@@ -183,27 +207,42 @@ export function createSession(store, child, intent = 'learn') {
       calm: true,
     });
   } else {
-    first = turn(state, {
-      messages: [msg(pick(LINES.greetWithCheckin).replaceAll('{name}', child.nickname), 'cheer')],
-      options: moodChips(),
-      expect: { type: 'mood' },
-    });
-    // returning after a gap: reference it warmly (docs/04 §4.1) — folded into
-    // the greeting bubble itself (one action → one bubble)
-    if (child.last_seen && now() - child.last_seen > 20 * 3600e3) {
-      first.messages[0].say = `${first.messages[0].say} I missed you, ${child.nickname}! I kept our words warm. 🦊`;
+    const op = chooseOpener(store, child, deterministic, openerKind);
+    const missed = !!(child.last_seen && now() - child.last_seen > 20 * 3600e3);
+    const head = [
+      pick(LINES.greetHeads),
+      missed ? pick(LINES.missedYou) : '',
+    ].filter(Boolean).join(' ').replaceAll('{name}', child.nickname);
+    if (op.kind === 'wonder') {
+      const w = op.wonder;
+      state.wonder = { id: w.id };
+      store.addEvent(id, child.key, 'wonder_shown', { id: w.id });
+      const tail = `${pick(WONDER_INTROS)} ${w.q}`;
+      opener = { kind: 'wonder', tail, missed };
+      first = turn(state, {
+        messages: [msg(`${head} ${tail}`, 'cheer')],
+        options: [
+          { id: 'wonder-a', label: w.a.label, emoji: w.a.emoji, kind: 'wonder' },
+          { id: 'wonder-b', label: w.b.label, emoji: w.b.emoji, kind: 'wonder' },
+        ],
+        expect: { type: 'wonder' },
+      });
+    } else {
+      const tail = pick(op.style.asks);
+      opener = { kind: 'mood', tail, missed };
+      first = turn(state, {
+        messages: [msg(`${head} ${tail}`, 'cheer')],
+        options: moodChips(op.style),
+        expect: { type: 'mood' },
+      });
     }
   }
   persist(store, id, state);
-  return { id, turn: first };
+  return { id, turn: first, opener };
 }
 
-function moodChips() {
-  return [
-    { id: 'mood-happy', label: 'happy', emoji: '😊', kind: 'mood' },
-    { id: 'mood-sleepy', label: 'sleepy', emoji: '😴', kind: 'mood' },
-    { id: 'mood-sad', label: 'a little sad', emoji: '😢', kind: 'mood' },
-  ];
+function moodChips(style = MOOD_STYLES[0]) {
+  return style.chips.map((c) => ({ ...c, kind: 'mood' }));
 }
 const calmActions = () => [
   { id: 'action-breathe', label: 'Breathe', emoji: '🫧', kind: 'action' },
@@ -449,6 +488,7 @@ async function handleChip(store, child, state, input, events, onChunk) {
     if (state.phase === 'WRAP') return handleWrapMood(store, child, state, chipId, events);
     return handleMood(store, child, state, chipId, events, onChunk);
   }
+  if (chipId.startsWith('wonder-')) return handleWonder(store, child, state, chipId, events, onChunk);
   if (chipId.startsWith('action-')) return handleAction(store, child, state, chipId, events, onChunk);
 
   if (chipId.startsWith('hint-') || chipId.startsWith('reply-')) {
@@ -1248,6 +1288,48 @@ async function handleMood(store, child, state, chipId, events, onChunk) {
   });
 }
 
+// The child picked one of the two pictures of a "wonder" opener. There is no wrong
+// pick: both get the same warm reveal with the true fact, then the lesson begins.
+async function handleWonder(store, child, state, chipId, events, onChunk) {
+  const w = WONDERS.find((x) => x.id === state.wonder?.id);
+  if (!w || state.phase !== 'CHECKIN') {
+    return turn(state, {
+      messages: [msg('Ooh! Let\'s keep playing!', 'think')],
+      options: state.lastOptions.length ? state.lastOptions : null,
+      expect: state.expect,
+      lessonAction: 'retry',
+    });
+  }
+  const picked = chipId === 'wonder-a' ? w.a : w.b;
+  const right = (chipId === 'wonder-a' ? 'a' : 'b') === w.answer;
+  events.push({ type: 'wonder', payload: { id: w.id, picked: picked.label, right } });
+  state.wonder = null;
+
+  const fallbackLine = `${pick(right ? WONDER_RIGHT : WONDER_TRY)} ${w.fact}`;
+  const llm = await composeFreeTurn(
+    {
+      task: { type: 'wonder', question: w.q, picked: picked.label, right, fact: w.fact },
+      child, store, input: `I picked ${picked.label}`,
+      history: [], scriptedFallback: fallbackLine,
+    },
+    onChunk,
+  );
+  remember(state, `I picked ${picked.label}`, llm.say);
+  logLlmFallback(events, llm, 'wonder');
+
+  state.mode = 'learning';
+  const start = startPlan(store, child, state, events);
+  return turn(state, {
+    messages: [msg(merged(llm.say, start.messages), 'cheer')],
+    options: start.options,
+    expect: start.expect,
+    wordChips: start.wordChips || null,
+    lessonAction: start.lessonAction || 'present',
+    llm: llm.usedLLM, llmProvider: llm.provider || null,
+    events,
+  });
+}
+
 function startPlan(store, child, state, events) {
   if (!state.plan) state.plan = buildPlan(store, child);
   state.phase = 'LEARNING';
@@ -1337,7 +1419,7 @@ async function conversationTurn(store, child, state, text, events, onChunk) {
   // scripted opener question is folded into the same bubble (never a second one)
   const asks = /[?？]/.test(llm.say.slice(-40));
   return turn(state, {
-    messages: [msg(asks ? llm.say : `${llm.say} ${pick(LINES.conversationOpeners)}`, 'cheer')],
+    messages: [msg(asks || llm.usedLLM ? llm.say : `${llm.say} ${pick(LINES.conversationOpeners)}`, 'cheer')],
     expect: { type: 'free' },
     lessonAction: 'present',
     llm: llm.usedLLM, llmProvider: llm.provider || null,

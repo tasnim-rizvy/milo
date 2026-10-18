@@ -22,7 +22,10 @@ Never say you feel sad or happy about the child's feelings — say you are sorry
 If you are not sure what the child meant, ask ONE simple question with two choices — never guess that they are sleepy, sad, or playing.
 If the child says they do not want to study or learn, cheerfully offer a quick game instead.
 You may be playful, curious, and forgetful (kids like helping you).
-Always keep the child talking or playing: end with a tiny question or invitation.
+Vary the shape of your replies: sometimes a tiny fun fact, a silly idea, a guess ("do you think…?"), a "what if", or a question — never the same shape twice in a row, and never start with the same words as your last line.
+When the child asks "why" or "what", answer in one simple sentence and add one tiny wow fact.
+Facts: only share very well-known, certainly-true things, in plain words — never numbers, statistics, records or exact speeds. If you are not sure it is true, do not say it.
+End with a tiny invitation only when it fits — a statement is fine too.
 Output plain text only — no quotes, no markdown.`;
 
 // Exported for tests: the hard prompt rules are part of the safety story.
@@ -98,7 +101,9 @@ function taskDirective(task) {
     case 'mood':
       return `Right now: the check-in chips are on screen and the child tapped "I feel ${task.moodLabel}". Mirror that feeling warmly${task.mood === 'sad' ? '; gently remind them they can talk to you, take a breathing break, or play something soft — those are the buttons below' : ' and say you will start right away'}. No question — one short message, the buttons come next.`;
     case 'greeting':
-      return `Right now: a brand-new session starts. Greet ${task.name} by name warmly and ask how they feel today.${task.missed ? ' Welcome them back — it has been a little while and you missed them.' : ''} One short message.`;
+      return `Right now: a brand-new session starts. Greet ${task.name} warmly in one short, cheerful phrase (a different way each time).${task.missed ? ' Welcome them back — it has been a little while and you missed them.' : ''} One short message.`;
+    case 'wonder':
+      return `Right now: you asked the child "${task.question}" with two picture choices and they tapped "${task.picked}". ${task.right ? 'That was the answer.' : 'The other picture was the answer, but this is a lovely pick.'} The true fact: ${task.fact} React warmly and share the fact in very simple words, like a tiny wow. Celebrate the fact only — never say "not" about the other picture, never correct the child, never say "wrong". No question — the next thing pops up right after.`;
     case 'scaffold': {
       if (task.step === 'simpler') return `Right now: the child is stuck on ${word}${emoji}. Make it easier: say you will show just two choices, then ask which one is ${word}.${must} One short message.`;
       if (task.step === 'hint') return `Right now: the child is still stuck on ${word}${emoji}. Give one gentle hint: the word starts with the letter "${task.letter}". One short message.`;
@@ -126,7 +131,7 @@ export function buildChatPrompt({ card, mode, input, history = [], task = null }
   } else {
     lines.push(mode === 'support'
       ? 'The child is upset or sharing feelings. Comfort first, zero teaching, gentle and short. Do not suggest games or activities — the next buttons offer breathe, talk, or bye. At most one gentle question about their feeling.'
-      : 'The child is chatting. Be curious and playful, keep it very short.');
+      : 'The child is chatting. Be curious and playful, keep it very short. React to what they said, then add something new: a tiny well-known fact (no numbers), a silly idea, or a fun "what if" — do not always ask a question.');
   }
   if (history.length) {
     lines.push(`Recent chat (oldest first — never repeat your last line's topic or question):\n${history
@@ -169,7 +174,7 @@ export function splitPinnedTail(raw, tail) {
 // Task types that must NOT end in a question — the next bubble/task follows
 // immediately, so a question would dangle (a leftover "Want to play?" misleads
 // the child into answering something the UI doesn't offer).
-const QUIET_TASKS = new Set(['praise', 'growth', 'checkin', 'mood', 'breathe', 'invite', 'thanks']);
+const QUIET_TASKS = new Set(['praise', 'growth', 'checkin', 'mood', 'breathe', 'invite', 'thanks', 'wonder']);
 
 // Programmatic checks on top of the sanitizer, per turn brief. Any failed
 // check sends the scripted twin instead — a scripted line is never a mystery.

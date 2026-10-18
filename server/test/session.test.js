@@ -398,3 +398,30 @@ test('Talk intent opens conversation; Play intent starts a game', async () => {
   assert.equal(t2.mode, 'engagement');
   assert.ok(t2.options.length >= 2);
 });
+
+test('wonder opener: two picture chips, no wrong pick, then the lesson starts', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  for (const pickId of ['wonder-a', 'wonder-b']) {
+    const child = store.child('maya');
+    const { id, turn } = createSession(store, child, 'learn', { openerKind: 'wonder' });
+    assert.equal(turn.expect.type, 'wonder');
+    assert.deepEqual(turn.options.map((o) => o.id), ['wonder-a', 'wonder-b']);
+    assert.match(say(turn), /Maya/);
+    const t2 = await handleInput(store, store.child('maya'), id, { type: 'chip', chipId: pickId });
+    assert.equal(t2.messages.length, 1, 'one action → one bubble');
+    assert.doesNotMatch(say(t2), /wrong/i);
+    assert.ok(t2.options?.length || t2.wordChips?.length, 'the first task follows in the same bubble');
+    assert.ok(store.recentEvents('maya', 20).some((e) => e.type === 'wonder'));
+  }
+});
+
+test('mood styles keep the engine ids (weather / animal chips still mean happy / sleepy / sad)', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  for (const kind of ['weather', 'animal']) {
+    const { turn } = createSession(store, store.child('maya'), 'learn', { openerKind: kind });
+    assert.deepEqual(turn.options.map((o) => o.id), ['mood-happy', 'mood-sleepy', 'mood-sad']);
+    assert.equal(turn.expect.type, 'mood');
+  }
+});
