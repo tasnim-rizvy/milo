@@ -454,3 +454,29 @@ test('sessions end without any mood chips: wrap-up offers bye / one more', async
   assert.ok(bye.effects.endCard);
   assert.ok(!(bye.options || []).some((o) => o.kind === 'mood'));
 });
+
+test('safety runs before the wrap-up: crisis words in WRAP go to support, they do not just end the session', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  const child = store.child('maya');
+  const { id } = createSession(store, child, 'learn');
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
+  loadState(store, id).phase = 'WRAP';
+  const t = await handleInput(store, child, id, { type: 'text', text: 'i want to die' });
+  assert.equal(t.safety, 'flagged');
+  assert.ok(!t.effects.endCard, 'the session is not closed over a crisis message');
+  assert.ok(t.options?.some((o) => o.id === 'action-breathe'), 'calm options are offered');
+  const t2 = await handleInput(store, store.child('maya'), id, { type: 'chip', chipId: 'action-bye' });
+  assert.ok(t2.effects.endCard, 'the child can still say bye afterwards');
+});
+
+test('safe text in WRAP still closes the session', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  const child = store.child('maya');
+  const { id } = createSession(store, child, 'learn');
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
+  loadState(store, id).phase = 'WRAP';
+  const t = await handleInput(store, child, id, { type: 'text', text: 'bye bye' });
+  assert.ok(t.effects.endCard);
+});

@@ -577,10 +577,7 @@ function trackMood(state, text, events) {
 async function handleText(store, child, state, text, events, onChunk) {
   trackMood(state, text, events);
   child.moodNow = state.moodEnd || null;
-  // 0) wrap-up mood (session end)
-  if (state.phase === 'WRAP') return handleWrapText(store, child, state, text, events);
-
-  // 1) safety first
+  // 1) safety first — before anything else, including the wrap-up
   const safety = classifySafety(text);
   if (safety.level !== 'ok') {
     state.counters.safetyFlags += 1;
@@ -620,6 +617,9 @@ async function handleText(store, child, state, text, events, onChunk) {
       events,
     });
   }
+
+  // 1b) wrap-up: whatever safe thing the child types now closes the session
+  if (state.phase === 'WRAP') return handleWrapText(store, child, state, text, events);
 
   // 2) SUPPORT flow owns the turn
   if (state.phase === 'SUPPORT') return handleSupportText(store, child, state, text, events, onChunk);
