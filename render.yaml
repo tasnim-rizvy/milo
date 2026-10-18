@@ -24,3 +24,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Render asks for this value when the Blueprint is created (never stored in git).
+      # Leave it empty to run fully scripted.
+      - key: GROQ_API_KEY
+        sync: false
