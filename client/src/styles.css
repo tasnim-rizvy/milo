@@ -464,3 +464,17 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .welcome-form { width: 100%; max-width: 460px; background: #fff; border-radius: 24px; padding: 16px; text-align: left; }
+
+/* ── Home: one big invitation ─────────────────────────────── */
+.start-btn {
+  border: 0; cursor: pointer; border-radius: 999px; padding: 20px 52px;
+  background: var(--orange-deep); color: #fff; box-shadow: 0 8px 0 #A94E10, var(--shadow);
+  font-family: 'Baloo 2', ui-rounded, sans-serif; font-weight: 800; font-size: 34px;
+  display: inline-flex; align-items: center; gap: 12px;
+  animation: start-pulse 2.2s ease-in-out infinite;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.start-btn:active { transform: translateY(6px) scale(0.98); box-shadow: 0 2px 0 #A94E10; animation: none; }
+.start-play { font-size: 26px; }
+@keyframes start-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+@media (prefers-reduced-motion: reduce) { .start-btn { animation: none; } }

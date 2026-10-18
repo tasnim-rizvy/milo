@@ -1,12 +1,5 @@
 import ProfileForm from './ProfileForm.jsx';
 
-const TILES = [
-  { intent: 'learn', emoji: '🎓', label: 'Learn', sub: 'Words & games', cls: 'tile-learn' },
-  { intent: 'talk', emoji: '💬', label: 'Talk', sub: 'Chat with Milo', cls: 'tile-talk' },
-  { intent: 'play', emoji: '🎮', label: 'Play', sub: 'Fun games', cls: 'tile-play' },
-  { intent: 'calm', emoji: '🫧', label: 'Calm', sub: 'Quiet corner', cls: 'tile-calm' },
-];
-
 export default function Home({ child, childKey, childrenList, onStart, onSwitch, onStickers, onProfiles, onCreate, ready, muted, onToggleMute }) {
   const name = child?.nickname || 'friend';
   return (
@@ -35,19 +28,10 @@ export default function Home({ child, childKey, childrenList, onStart, onSwitch,
       ) : (
       <main className="home">
         <div className="mascot" aria-hidden="true">🦊</div>
-        <div>
-          <div className="hello-card">Hi {name}! 👋</div>
-          <div className="hello-sub">What shall we do today?</div>
-        </div>
-        <div className="tiles">
-          {TILES.map((t) => (
-            <button key={t.intent} className={`tile ${t.cls}`} onClick={() => onStart(t.intent)}>
-              <span className="tile-emoji" aria-hidden="true">{t.emoji}</span>
-              <span className="tile-label">{t.label}</span>
-              <span className="tile-sub">{t.sub}</span>
-            </button>
-          ))}
-        </div>
+        <div className="hello-card">Hi {name}! 👋</div>
+        <button className="start-btn" onClick={() => onStart('learn')}>
+          <span className="start-play" aria-hidden="true">▶</span> Let's go!
+        </button>
         <div className="home-actions">
           <button className="sticker-btn" onClick={onStickers}>
             🎒 My stickers

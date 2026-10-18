@@ -76,13 +76,13 @@ async function main() {
   await page.goto(`${BASE}/?dev=1`, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.setItem('milo-child', 'maya'));
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('.tiles', { timeout: 15000 });
+  await page.waitForSelector('.start-btn', { timeout: 15000 });
   await sleep(600);
-  ok('home renders with 4 tiles + stickers', (await page.$$('.tile')).length === 4);
+  ok('home: one big Let\'s go button + stickers, no menu of tiles', !!(await page.$('.start-btn')) && (await page.$$('.tile')).length === 0);
   await page.screenshot({ path: join(EVID, '01-home.png') });
 
   // ── 2 · Maya L1 lesson: mood → wrong chip → correct chip ─────────────────
-  await clickText('.tile', 'Learn');
+  await clickText('.start-btn', 'go');
   await page.waitForFunction(() => (window.__milo?.n || 0) >= 1, { timeout: 15000 });
   await sleep(400);
   let m = await milo();
@@ -135,15 +135,15 @@ async function main() {
 
   // play again → home
   await clickText('.btn-primary', 'Play again');
-  await page.waitForSelector('.tiles', { timeout: 8000 });
+  await page.waitForSelector('.start-btn', { timeout: 8000 });
   ok('"Play again" returns home (no dead end)', true);
 
   // ── 4 · Aarav: mid-L2 → stage check → graduation ─────────────────────────
   await postJson('/api/reset-demo', {});
   await page.evaluate(() => localStorage.setItem('milo-child', 'aarav'));
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('.tiles', { timeout: 15000 });
-  await clickText('.tile', 'Learn');
+  await page.waitForSelector('.start-btn', { timeout: 15000 });
+  await clickText('.start-btn', 'go');
   await page.waitForFunction(() => (window.__milo?.n || 0) >= 1, { timeout: 15000 });
   await clickText('.chip', 'happy');
   m = await waitTurn(1);
