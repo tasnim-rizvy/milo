@@ -15,7 +15,7 @@ const wordsOf = (endCard) =>
 export default function ChatView({
   child, calm, mode, stars, latency, messages, typing, streamText, options, wordChips,
   input, setInput, onSend, onChip, onExit, endCard, onPlayAgain, busy,
-  onStickers, muted, onToggleMute,
+  onProgress, muted, onToggleMute,
 }) {
   const endRef = useRef(null);
   const reduce = useMemo(
@@ -44,7 +44,7 @@ export default function ChatView({
           <button className="icon-btn" aria-label={muted ? 'Unmute sounds' : 'Mute sounds'} onClick={onToggleMute}>
             {muted ? '🔇' : '🔊'}
           </button>
-          <button className="icon-btn" aria-label="My stickers" onClick={onStickers}>🎒</button>
+          <button className="icon-btn" aria-label="My progress" onClick={onProgress}>📈</button>
           <button className="icon-btn" aria-label="Say bye to Milo" onClick={onExit}>✕</button>
         </div>
       </header>

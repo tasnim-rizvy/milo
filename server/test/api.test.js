@@ -167,3 +167,26 @@ test('profiles are private to their device (list, play, progress, delete); demo 
   assert.equal((await fetch(`${base}/api/children/maya`, { method: 'DELETE', headers: B })).status, 404);
   assert.equal((await fetch(`${base}/api/children/${ann.key}`, { method: 'DELETE', headers: A })).status, 200);
 });
+
+test('progress summary: level path, learned words, feelings, milestones that unlock early', async (t) => {
+  const { app, base } = await start();
+  t.after(() => app.close());
+  const p = await (await fetch(`${base}/api/progress/aarav`)).json();
+  const s = p.summary;
+  assert.equal(s.level, 2);
+  assert.ok(s.words.learned.length > 0 && s.words.learned[0].emoji && s.words.learned[0].text);
+  assert.ok(s.toNext >= 0 && s.toNext <= 100);
+  assert.ok(s.milestones.length >= 6);
+  const earned = Object.fromEntries(s.milestones.map((m) => [m.id, m.earned]));
+  assert.equal(earned['level-2'], true);
+  assert.equal(earned['level-3'], false);
+  // a brand-new profile starts at zero, nothing earned, and no crash
+  const fresh = await (await fetch(`${base}/api/children`, {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-milo-device': 'device-cccccccccccccccc' },
+    body: JSON.stringify({ nickname: 'New', age: 4 }),
+  })).json();
+  const f = await (await fetch(`${base}/api/progress/${fresh.child.key}`, { headers: { 'x-milo-device': 'device-cccccccccccccccc' } })).json();
+  assert.equal(f.summary.stars, 0);
+  assert.equal(f.summary.words.learned.length, 0);
+  assert.ok(f.summary.milestones.every((m) => !m.earned));
+});

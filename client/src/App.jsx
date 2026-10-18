@@ -5,7 +5,7 @@ import Home from './components/Home.jsx';
 import ChatView from './components/ChatView.jsx';
 import Confetti from './components/Confetti.jsx';
 import BadgePop from './components/BadgePop.jsx';
-import StickerBook from './components/StickerBook.jsx';
+import ProgressView from './components/ProgressView.jsx';
 import KidProfiles from './components/KidProfiles.jsx';
 import DevPanel from './components/DevPanel.jsx';
 
@@ -37,9 +37,9 @@ export default function App() {
   const [badgePop, setBadgePop] = useState(null);
   const [endCard, setEndCard] = useState(null);
   const [latSamples, setLatSamples] = useState([]);
-  const [stickersOpen, setStickersOpen] = useState(false);
+  const [progressOpen, setProgressOpen] = useState(false);
   const [profilesOpen, setProfilesOpen] = useState(false);
-  const [badges, setBadges] = useState([]);
+  const [progress, setProgress] = useState(null);
   const [dev, setDev] = useState(null);
   const [muted, setMuted] = useState(sound.muted);
 
@@ -222,13 +222,13 @@ export default function App() {
     goHome();
   }, [goHome]);
 
-  const openStickers = useCallback(async () => {
+  const openProgress = useCallback(async () => {
     sound.tap();
     try {
       const p = await getProgress(childKey);
-      setBadges(p.badges || []);
-    } catch { setBadges([]); }
-    setStickersOpen(true);
+      setProgress(p.summary || null);
+    } catch { setProgress(null); }
+    setProgressOpen(true);
   }, [childKey]);
 
   const switchChild = useCallback((key) => {
@@ -271,7 +271,7 @@ export default function App() {
           childrenList={children}
           onStart={start}
           onSwitch={switchChild}
-          onStickers={openStickers}
+          onProgress={openProgress}
           onProfiles={openProfiles}
           onCreate={makeKid}
           ready={childrenLoaded}
@@ -298,15 +298,15 @@ export default function App() {
           endCard={endCard}
           onPlayAgain={goHome}
           busy={busy}
-          onStickers={openStickers}
+          onProgress={openProgress}
           muted={muted}
           onToggleMute={() => setMuted(sound.toggle())}
         />
       )}
       {confettiKey > 0 && <Confetti key={confettiKey} />}
       {badgePop && <BadgePop badge={badgePop} onDone={() => setBadgePop(null)} />}
-      {stickersOpen && (
-        <StickerBook badges={badges} child={child} onClose={() => { sound.tap(); setStickersOpen(false); }} />
+      {progressOpen && (
+        <ProgressView progress={progress} child={child} onClose={() => { sound.tap(); setProgressOpen(false); }} />
       )}
       {profilesOpen && (
         <KidProfiles

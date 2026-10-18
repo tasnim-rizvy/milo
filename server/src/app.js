@@ -7,6 +7,7 @@ import { existsSync } from 'node:fs';
 import { config, llmProviders } from './config.js';
 import { openStore } from './store.js';
 import { seedDemo } from './seed.js';
+import { buildProgress } from './engine/progress.js';
 import { createSession, handleInput } from './engine/session.js';
 import { composeFreeTurn } from './llm/compose.js';
 import { levelStats } from './engine/curriculum.js';
@@ -121,6 +122,7 @@ export async function buildApp(opts = {}) {
         item_id: p.item_id, box: p.box, correct: p.correct, wrong: p.wrong, next_due: p.next_due,
       })),
       badges: store.badges(child.key),
+      summary: buildProgress(store, child),
       events: store.recentEvents(child.key, 25),
     };
   });

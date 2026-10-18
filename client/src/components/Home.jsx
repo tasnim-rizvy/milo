@@ -1,6 +1,6 @@
 import ProfileForm from './ProfileForm.jsx';
 
-export default function Home({ child, childKey, childrenList, onStart, onSwitch, onStickers, onProfiles, onCreate, ready, muted, onToggleMute }) {
+export default function Home({ child, childKey, childrenList, onStart, onSwitch, onProgress, onProfiles, onCreate, ready, muted, onToggleMute }) {
   const name = child?.nickname || 'friend';
   return (
     <div className="home-wrap">
@@ -33,8 +33,8 @@ export default function Home({ child, childKey, childrenList, onStart, onSwitch,
           <span className="start-play" aria-hidden="true">▶</span> Let's go!
         </button>
         <div className="home-actions">
-          <button className="sticker-btn" onClick={onStickers}>
-            🎒 My stickers
+          <button className="sticker-btn" onClick={onProgress}>
+            📈 My progress
             {child?.level ? <span className="level-tag">Level {child.level}</span> : null}
             {child?.total_stars > 0 ? <span className="stars-tag">⭐ {child.total_stars}</span> : null}
           </button>

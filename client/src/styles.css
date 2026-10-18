@@ -478,3 +478,31 @@ button { -webkit-tap-highlight-color: transparent; }
 .start-play { font-size: 26px; }
 @keyframes start-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 @media (prefers-reduced-motion: reduce) { .start-btn { animation: none; } }
+
+/* ── My progress ──────────────────────────────────────────── */
+.pg { display: flex; flex-direction: column; gap: 12px; }
+.pg-empty { padding: 28px 0; text-align: center; color: var(--muted-ink); font-size: 17px; }
+.pg-card { background: #fff; border: 3px solid var(--mist); border-radius: 22px; padding: 14px; }
+.pg-levels { display: flex; justify-content: space-between; margin-bottom: 12px; }
+.pg-lvl { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; opacity: 0.55; }
+.pg-lvl.done, .pg-lvl.now { opacity: 1; }
+.pg-lvl-dot {
+  width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--mist); font-family: 'Baloo 2', ui-rounded, sans-serif; font-weight: 800; font-size: 19px;
+}
+.pg-lvl.done .pg-lvl-dot { background: #CFEFD3; }
+.pg-lvl.now .pg-lvl-dot { background: var(--orange-deep); color: #fff; box-shadow: 0 0 0 4px #FFE3C9; }
+.pg-lvl-name { font-size: 13px; font-weight: 800; }
+.pg-bar { height: 16px; background: var(--mist); border-radius: 999px; overflow: hidden; }
+.pg-bar-fill { height: 100%; background: linear-gradient(90deg, #FFB45E, var(--orange-deep)); border-radius: 999px; transition: width 0.6s ease; }
+.pg-note { margin-top: 8px; font-size: 13.5px; color: var(--muted-ink); }
+.pg-note.center { text-align: center; margin-top: -4px; }
+.pg-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pg-stat { background: #FFFAEF; border: 3px solid #FFE3AA; border-radius: 20px; padding: 10px 4px; text-align: center; }
+.pg-big { font-family: 'Baloo 2', ui-rounded, sans-serif; font-weight: 800; font-size: 24px; }
+.pg-cap { font-size: 12.5px; color: var(--muted-ink); }
+.pg-h { font-family: 'Baloo 2', ui-rounded, sans-serif; font-weight: 800; font-size: 18px; margin-bottom: 8px; }
+.pg-h.sub { margin-top: 12px; font-size: 15px; color: var(--muted-ink); }
+.pg-words { display: flex; flex-wrap: wrap; gap: 8px; }
+.pg-word { background: #EAF6EC; border-radius: 999px; padding: 5px 12px; font-weight: 800; font-size: 15px; }
+.pg-word.dim { background: var(--mist); color: var(--muted-ink); }
