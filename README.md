@@ -32,6 +32,11 @@ analysis, architecture, learning design, UI/UX plan, user journeys, and the buil
   "turn briefs" (~0.5–0.8 s to first token, streaming to the bubble). The engine still owns all
   task logic, chips, stars and safety; every briefed line has a scripted twin that serves when the
   model is slow, rate-limited, or its output fails the programmatic checks.
+- **One action → one bubble.** Every tap or message gets exactly one Milo bubble — no stacked
+  replies. Warmth is AI-phrased from the turn brief; when an exact teaching line must follow (the
+  next question, the word model), it merges into that same bubble and the model must end with it
+  verbatim (programmatically checked, scripted twin as the net). The Calm Corner keeps the same
+  turn-taking rhythm: each [🫧 One more] tap guides one breath, then Milo hands the turn back.
 - **Want live generations instead of the scripted bank?** Paste one free key — `GROQ_API_KEY`
   (console.groq.com, card-free) — into Render's environment (or `.env` locally). A
   `GEMINI_API_KEY` (aistudio.google.com) is also supported as an optional extra rung, but on some
@@ -42,8 +47,8 @@ analysis, architecture, learning design, UI/UX plan, user journeys, and the buil
 ### 3-minute tour
 
 1. **Maya** (starter profile) — tap a mood chip → answer a word task (tap the *wrong* chip first:
-   Milo recasts, it never says "wrong") → type `i'm tired` → Calm Corner → breathe → goodbye
-   ritual + star card.
+   Milo recasts, it never says "wrong") → type `i'm tired` → Calm Corner (each tap = one guided
+   breath) → goodbye ritual + star card.
 2. **Aarav** (preloaded mid-L2, gate-ready) — one lesson asks him to say a word, read, count,
    answer yes/no, and build a sentence → **graduation ceremony** (confetti, badge, star bonus) →
    L3 sentence-building preview.
@@ -59,7 +64,7 @@ timestamp it was produced against (the committed run: `http://localhost:3001`).
 
 | Brief requirement | Where it lives | Verified by |
 |---|---|---|
-| **R1 · Teaches step-by-step, progress across sessions** | `server/src/engine/curriculum.js` — Leitner boxes, 80% mastery gate (coverage & first-try), 5-task stage check, graduation | 64 server tests · requirement-check `[R1]` ×3 (L1 lesson, gate-ready profile, `phase=STAGE`) · e2e “all 5 stage-check tasks answered”, “Aarav promoted L2 → L3” |
+| **R1 · Teaches step-by-step, progress across sessions** | `server/src/engine/curriculum.js` — Leitner boxes, 80% mastery gate (coverage & first-try), 5-task stage check, graduation | 69 server tests · requirement-check `[R1]` ×3 (L1 lesson, gate-ready profile, `phase=STAGE`) · e2e “all 5 stage-check tasks answered”, “Aarav promoted L2 → L3” |
 | **R2 · Not every turn is a lesson** | `server/src/engine/modes.js` — learning / conversation / engagement / support, hysteresis + idle cascade | requirement-check `[R2]` ×3 (`"i want plaay!"` → engagement, `"i'm tired"` → support, 3 misses → support) |
 | **R3 · Social-emotional learning woven in** | `server/src/engine/sel.js` + `session.js` — recasts without the word “wrong”, effort praise, feeling check-ins, Calm Corner, goodbye ritual | requirement-check `[R3]` ×4 · e2e calm-corner & end-card checks · tests |
 | **R4 · Remembers context across sessions** | learner card + spaced-repetition due list + recent turns (`session.js`, `curriculum.js`) | requirement-check `[R4]` ×2 (“Yesterday: elephant 🐘”, interests “dinosaurs”) |
@@ -103,7 +108,7 @@ npm run dev:client   # Vite on :5173, proxies /api → :3001
 ## Tests & evidence
 
 ```bash
-npm test             # 64 unit/integration tests (node --test)
+npm test             # 69 unit/integration tests (node --test)
 npm run requirements # 19/19 live requirement checks → tools/evidence/requirement-check.json
 npm run latency      # latency suites A/B/C     → tools/evidence/latency.json
 npm run e2e          # 24-check headless browser tour → tools/evidence/ (+ 10 screenshots)

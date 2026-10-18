@@ -102,7 +102,7 @@ provable in one demo click even if the live session starts at L1.
 | 0:00–0:15 | Intro: "Meet Milo: a chatbot that teaches English to under-7s. No reading required — and no microphone needed." Show Home + latency badge armed | — |
 | 0:15–0:55 | Live L1 lesson: tap the correct chip (star chime + praise) → tap a wrong chip on purpose (recast, soft amber glow, no red X) → **type a typo** "rad" → Milo celebrates and recasts "RED 🔴" | R1, R3 |
 | 0:55–1:20 | Type "i want plaay" → chip 🎓→🎮, Simon-says tap game with lesson words | R2 |
-| 1:20–1:45 | Type "i'm tired…" → chip →💚, Calm Corner breathing, recovery offer, difficulty drop | R2, R3 |
+| 1:20–1:45 | Type "i'm tired…" → chip →💚, Calm Corner breathing (each tap = one guided breath), recovery offer, difficulty drop | R2, R3 |
 | 1:45–2:15 | Load preloaded mid-L2 profile: Milo references yesterday's duck + asks about the blue dino → level proof + graduation overlay | R1, R4 |
 | 2:15–2:40 | Edge-case montage: typo "elefant" recast · off-topic cat detour → bridged · "I'm bored" → stretch word · home-language bridge line | R2, R3, robustness |
 | 2:40–3:00 | Close: latency table on screen (first words ≈0.6–0.9 s, full replies ≈1.0 s p95, scripted twins ≈10–70 ms). "Kill the LLM and it still teaches" — optionally kill the key live, show scripted mode | R5, robustness |

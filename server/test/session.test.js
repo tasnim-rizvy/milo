@@ -146,11 +146,65 @@ test('upset preempts teaching: "i dont want to" → SUPPORT → breathe → easy
 
   const breathe = await handleInput(store, child, id, { type: 'chip', chipId: 'action-breathe' });
   assert.equal(breathe.effects.calm, true);
+  assert.equal(breathe.messages.length, 1, 'calm corner is one bubble per tap');
   assert.match(say(breathe).toLowerCase(), /breathe|breath|balloon|candle/);
+  assert.ok(breathe.options.some((o) => o.id === 'action-breathe'), 'a "one more" chip comes back');
+  assert.ok(breathe.options.some((o) => o.id === 'action-easy-game'));
+  assert.ok(breathe.options.some((o) => o.id === 'action-bye'));
 
   const easy = await handleInput(store, child, id, { type: 'chip', chipId: 'action-easy-game' });
   assert.ok(easy.options.length >= 2, 'easy review-only game starts');
   assert.equal(easy.mode, 'engagement');
+});
+
+test('breathe loop is interactive: each tap guides one fresh breath (AI-shaped, one bubble)', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  const child = store.child('maya');
+  const { id, turn } = await freshSession(store, 'maya', 'calm');
+  assert.equal(turn.messages.length, 1, 'calm-corner opener is a single bubble');
+  assert.equal(turn.mode, 'support');
+  assert.ok(turn.options.some((o) => o.id === 'action-breathe'));
+
+  const b1 = await handleInput(store, child, id, { type: 'chip', chipId: 'action-breathe' });
+  assert.equal(b1.messages.length, 1);
+  const b2 = await handleInput(store, child, id, { type: 'chip', chipId: 'action-breathe' });
+  assert.equal(b2.messages.length, 1);
+  assert.notEqual(say(b1), say(b2), 'a second tap gets a fresh breath line, not the same wall');
+  assert.equal(b2.effects.calm, true);
+});
+
+test('one action → one bubble: no turn ever stacks multiple Milo bubbles', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  const child = store.child('maya');
+  const { id } = createSession(store, child, 'learn');
+  const seen = [];
+  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  seen.push(t);
+  // walk a real mixed flow: answer, miss once, answer, "i dont know", nudge…
+  for (let i = 0; i < 14; i++) {
+    if (!t.expect) break;
+    if (t.expect.type === 'chip' || t.expect.type === 'count' || t.expect.type === 'yes-no') {
+      const right = t.expect.answers[0];
+      const wrong = (t.options || []).find((o) => o.id !== right)?.id;
+      // every third step: tap a wrong chip to exercise recast + retry
+      const pickId = i % 3 === 1 && wrong ? wrong : right;
+      t = await handleInput(store, child, id, { type: 'chip', chipId: pickId });
+    } else if (t.expect.type === 'word' || t.expect.type === 'frame') {
+      t = await handleInput(store, child, id, { type: 'text', text: i % 4 === 3 ? 'i dont know' : t.expect.answers[0] });
+    } else if (t.expect.type === 'mood') {
+      t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+    } else if (t.expect.type === 'action') {
+      t = await handleInput(store, child, id, { type: 'chip', chipId: 'action-easy-game' });
+    } else {
+      t = await handleInput(store, child, id, { type: 'idle' });
+    }
+    seen.push(t);
+  }
+  for (const turn of seen) {
+    assert.ok(turn.messages.length <= 1, `a turn stacked bubbles: "${say(turn)}"`);
+  }
 });
 
 test('feelings turn is LLM-shaped: scripted safety net + calm options when no keys', async () => {

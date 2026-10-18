@@ -113,3 +113,37 @@ test('quiet briefs reject a dangling question (the next task follows immediately
   assert.ok(taskViolations({ type: 'praise', word: 'cat' }, 'You found the cat! Want more?').includes('asks-question'));
   assert.deepEqual(taskViolations({ type: 'recast', word: 'cat' }, 'Can you find the cat?'), []);
 });
+
+test('endWith pins the exact scripted tail inside one bubble (one action → one reply)', async () => {
+  const { buildChatPrompt, taskViolations } = await import('../src/llm/compose.js');
+  const task = { type: 'praise', word: 'cat', emoji: '🐱', firstTry: true, endWith: 'Now — which one is the dog? 🐶' };
+  const prompt = buildChatPrompt({ card: 'Child: Maya', task, input: '' });
+  assert.match(prompt, /End your message with exactly this line/);
+  assert.match(prompt, /Now — which one is the dog\? 🐶/);
+  // ends with the tail → valid, even though the tail itself asks a question
+  assert.deepEqual(taskViolations(task, 'YES! The cat! 🎉 Now — which one is the dog? 🐶'), []);
+  // tail missing or a question of its own → rejected (twin serves)
+  assert.ok(taskViolations(task, 'YES! The cat! 🎉 Now — find it!').includes('missing-tail'));
+  assert.ok(taskViolations(task, 'Was it the cat? 🎉 Now — which one is the dog? 🐶').includes('extra-question'));
+});
+
+test('pinned tail splits cleanly: the model head is isolated, the tail keeps its emoji', async () => {
+  const { splitPinnedTail } = await import('../src/llm/compose.js');
+  const tail = '🙏 One more look! Which one is please?';
+  assert.equal(
+    splitPinnedTail('Great job saying please! 🎉 🙏 One more look! Which one is please?', tail),
+    'Great job saying please!',
+  );
+  // apostrophes fold like norm(): "don't" matches "dont"
+  assert.equal(splitPinnedTail("Yay don't worry! Now you! Which one is hi?", 'Now you! Which one is hi?'), "Yay don't worry!");
+  // drift → null (the scripted twin serves)
+  assert.equal(splitPinnedTail('Yay! Now find it!', tail), null);
+});
+
+test('breathe brief guides exactly one breath and stays question-free', async () => {
+  const { buildChatPrompt, taskViolations } = await import('../src/llm/compose.js');
+  const prompt = buildChatPrompt({ card: 'Child: Maya', task: { type: 'breathe' }, input: '' });
+  assert.match(prompt, /exactly ONE slow breath/);
+  assert.deepEqual(taskViolations({ type: 'breathe' }, 'Breathe in… and blow out. 🕯️'), []);
+  assert.ok(taskViolations({ type: 'breathe' }, 'Breathe in… ready?').includes('asks-question'));
+});

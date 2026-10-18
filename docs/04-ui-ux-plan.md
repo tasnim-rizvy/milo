@@ -184,7 +184,7 @@ Soft pink/mist palette, ambient pad sound (optional), Milo in `calm`/`care` pose
 │   │ breathe with me? 🫧    │   │
 │   ╰────────────────────────╯   │
 │        ◯ → ◯◯ → ◯◯ ◯          │   breathing balloon grows/shrinks
-│        "in…      …out…"        │   2 slow cycles (~16 s total)
+│        "in…      …out…"        │   one guided breath per tap
 │  ┌─────┐┌─────┐┌─────┐┌─────┐  │
 │  │ 😊  ││ 😴  ││ 😢 ││ 😠  │  │   4 feelings chips ("tap how you feel")
 │  └─────┘└─────┘└─────┘└─────┘  │
@@ -192,9 +192,10 @@ Soft pink/mist palette, ambient pad sound (optional), Milo in `calm`/`care` pose
 └───────────────────────────────┘
 ```
 
-No scores, no stars, no teaching here. Tapping a feeling → Milo names it and validates
-("Tired is a real feeling. Everyone gets tired 😴."). Exit options: gentle re-entry ("feel like
-playing gently?"), continue breathing, or wave goodbye. Every visit is logged as a *caring* signal — never as a failure.
+No scores, no stars, no teaching here — and no monologues: each tap guides exactly one AI-phrased
+breath ("in… and out…"), then Milo hands the turn back ([🫧 One more] · [🧸 Gentle play] · [👋 Bye]).
+Tapping a feeling → Milo names it and validates ("Tired is a real feeling. Everyone gets tired 😴.").
+Every visit is logged as a *caring* signal — never as a failure.
 
 ### 4.5 End card (session wrap-up)
 
@@ -205,6 +206,12 @@ pictures + numbers only. No summary text, no links.
 
 ## 5. Interaction rules (behavior contract)
 
+- **One action → one reply.** Every tap or message produces exactly **one** Milo bubble. Warmth
+  lines are AI-phrased from a strict turn brief; exact engine lines that must follow (the next
+  question, the word model, the mood ask) merge into that same bubble, and the model is required to
+  end with them verbatim — checked programmatically, with the scripted twin as the safety net.
+  The Calm Corner breathes in the same rhythm: each [🫧 One more] tap guides one breath, then the
+  child chooses the next move.
 - **One question per turn, max.** Chips always accompany a teaching question; typing is optional.
 - **No timers, no nagging.** Milo waits patiently; after ~45 s idle he sends a single gentle nudge, never twice in a row.
 - **Typos are wonderful.** Tolerant matching + phonetic aliases; invented spellings get celebrated, then gently recast.
