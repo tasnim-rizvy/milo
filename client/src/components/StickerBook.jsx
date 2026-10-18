@@ -15,7 +15,7 @@ export default function StickerBook({ badges = [], child, onClose }) {
         <div className="sheet-head">
           <div>
             <div className="sheet-title">Stickers 🎒</div>
-            <div className="sheet-sub">{child?.nickname || 'My'} · Level {child?.level ?? 1}</div>
+            <div className="sheet-sub">{child?.nickname || 'My'} · Level {child?.level ?? 1} · ⭐ {child?.total_stars || 0}</div>
           </div>
           <button className="icon-btn" onClick={onClose} aria-label="Close">✕</button>
         </div>

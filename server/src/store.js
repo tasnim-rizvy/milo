@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS children (
   interests TEXT NOT NULL DEFAULT '[]',
   home_language TEXT NOT NULL DEFAULT '',
   level INTEGER NOT NULL DEFAULT 1,
+  total_stars INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL DEFAULT 0,
   first_try_correct INTEGER NOT NULL DEFAULT 0,
   first_try_total INTEGER NOT NULL DEFAULT 0,
@@ -64,20 +65,28 @@ export function openStore(path) {
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA busy_timeout = 3000');
   db.exec(SCHEMA);
+  // Migration: total_stars arrived with the kid-profiles feature — existing
+  // demo databases gain the column in place (no data loss).
+  const childCols = db.prepare('PRAGMA table_info(children)').all().map((c) => c.name);
+  if (!childCols.includes('total_stars')) {
+    db.exec('ALTER TABLE children ADD COLUMN total_stars INTEGER NOT NULL DEFAULT 0');
+  }
 
   const st = {
     childGet: db.prepare('SELECT * FROM children WHERE key = ?'),
     childAll: db.prepare('SELECT * FROM children ORDER BY created_at ASC'),
     childUpsert: db.prepare(`INSERT INTO children
         (key, nickname, age_band, reading_band, avatar, interests, home_language, level,
-         created_at, first_try_correct, first_try_total, last_summary, last_seen)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         total_stars, created_at, first_try_correct, first_try_total, last_summary, last_seen)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET
         nickname=excluded.nickname, age_band=excluded.age_band, reading_band=excluded.reading_band,
         avatar=excluded.avatar, interests=excluded.interests, home_language=excluded.home_language,
-        level=excluded.level, first_try_correct=excluded.first_try_correct,
+        level=excluded.level, total_stars=excluded.total_stars,
+        first_try_correct=excluded.first_try_correct,
         first_try_total=excluded.first_try_total, last_summary=excluded.last_summary,
         last_seen=excluded.last_seen`),
+    starAdd: db.prepare('UPDATE children SET total_stars = total_stars + ? WHERE key = ?'),
     childDelete: db.prepare('DELETE FROM children WHERE key = ?'),
     progWipe: db.prepare('DELETE FROM item_progress WHERE child_key = ?'),
     sessWipe: db.prepare('DELETE FROM sessions WHERE child_key = ?'),
@@ -120,9 +129,13 @@ export function openStore(path) {
       st.childUpsert.run(
         c.key, c.nickname, c.age_band, c.reading_band, c.avatar,
         JSON.stringify(c.interests || []), c.home_language || '', c.level,
+        c.total_stars || 0,
         c.created_at || Date.now(), c.first_try_correct || 0, c.first_try_total || 0,
         c.last_summary || '', c.last_seen || 0,
       );
+    },
+    addStars(key, n) {
+      st.starAdd.run(n, key);
     },
     deleteChild(key) {
       st.progWipe.run(key);

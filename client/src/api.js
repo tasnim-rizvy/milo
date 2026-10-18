@@ -5,6 +5,14 @@ const j = async (res) => {
 };
 
 export const getChildren = () => fetch('/api/children').then(j);
+export const addChild = (nickname, avatar) =>
+  fetch('/api/children', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ nickname, avatar }),
+  }).then(j);
+export const removeChild = (key) =>
+  fetch(`/api/children/${encodeURIComponent(key)}`, { method: 'DELETE' }).then(j);
 export const getHealth = () => fetch('/api/health').then(j);
 export const getProgress = (key) => fetch(`/api/progress/${encodeURIComponent(key)}`).then(j);
 export const resetDemo = () => fetch('/api/reset-demo', { method: 'POST' }).then(j);

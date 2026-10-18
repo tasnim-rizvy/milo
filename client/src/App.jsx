@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getChildren, getProgress, resetDemo, startSession, sendMessage } from './api.js';
+import { addChild, getChildren, getProgress, removeChild, resetDemo, startSession, sendMessage } from './api.js';
 import { sound } from './sound.js';
 import Home from './components/Home.jsx';
 import ChatView from './components/ChatView.jsx';
 import Confetti from './components/Confetti.jsx';
 import BadgePop from './components/BadgePop.jsx';
 import StickerBook from './components/StickerBook.jsx';
+import KidProfiles from './components/KidProfiles.jsx';
 import DevPanel from './components/DevPanel.jsx';
 
 const IDLE_MS = 45000;
@@ -35,6 +36,7 @@ export default function App() {
   const [endCard, setEndCard] = useState(null);
   const [latSamples, setLatSamples] = useState([]);
   const [stickersOpen, setStickersOpen] = useState(false);
+  const [profilesOpen, setProfilesOpen] = useState(false);
   const [badges, setBadges] = useState([]);
   const [dev, setDev] = useState(null);
   const [muted, setMuted] = useState(sound.muted);
@@ -219,6 +221,25 @@ export default function App() {
     try { localStorage.setItem('milo-child', key); } catch { /* noop */ }
   }, []);
 
+  // Kid-profiles corner: create / remove kid profiles (progress rows appear
+  // lazily; each kid carries their own words, level and star total).
+  const openProfiles = useCallback(() => { sound.tap(); setProfilesOpen(true); }, []);
+
+  const makeKid = useCallback(async ({ nickname, avatar }) => {
+    const r = await addChild(nickname, avatar);
+    reloadChildren();
+    switchChild(r.child.key);
+    return r;
+  }, [reloadChildren, switchChild]);
+
+  const dropKid = useCallback(async (key) => {
+    await removeChild(key);
+    const d = await getChildren();
+    const rest = d.children || [];
+    setChildren(rest);
+    if (key === childKey && rest[0]) switchChild(rest[0].key);
+  }, [childKey, switchChild]);
+
   const lat = useMemo(() => {
     if (!latSamples.length) return null;
     const s = [...latSamples].sort((a, b) => a - b);
@@ -235,6 +256,7 @@ export default function App() {
           onStart={start}
           onSwitch={switchChild}
           onStickers={openStickers}
+          onProfiles={openProfiles}
           muted={muted}
           onToggleMute={() => setMuted(sound.toggle())}
         />
@@ -267,6 +289,16 @@ export default function App() {
       {badgePop && <BadgePop badge={badgePop} onDone={() => setBadgePop(null)} />}
       {stickersOpen && (
         <StickerBook badges={badges} child={child} onClose={() => { sound.tap(); setStickersOpen(false); }} />
+      )}
+      {profilesOpen && (
+        <KidProfiles
+          childrenList={children}
+          childKey={childKey}
+          onSwitch={switchChild}
+          onAdd={makeKid}
+          onRemove={dropKid}
+          onClose={() => { setProfilesOpen(false); }}
+        />
       )}
       {devOn && (
         <DevPanel

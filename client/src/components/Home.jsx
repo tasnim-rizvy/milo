@@ -5,7 +5,7 @@ const TILES = [
   { intent: 'calm', emoji: '🫧', label: 'Calm', sub: 'Quiet corner', cls: 'tile-calm' },
 ];
 
-export default function Home({ child, childKey, childrenList, onStart, onSwitch, onStickers, muted, onToggleMute }) {
+export default function Home({ child, childKey, childrenList, onStart, onSwitch, onStickers, onProfiles, muted, onToggleMute }) {
   const name = child?.nickname || 'friend';
   return (
     <div className="home-wrap">
@@ -36,6 +36,7 @@ export default function Home({ child, childKey, childrenList, onStart, onSwitch,
           <button className="sticker-btn" onClick={onStickers}>
             🎒 My stickers
             {child?.level ? <span className="level-tag">Level {child.level}</span> : null}
+            {child?.total_stars > 0 ? <span className="stars-tag">⭐ {child.total_stars}</span> : null}
           </button>
         </div>
         {childrenList && childrenList.length > 1 && (
@@ -52,6 +53,7 @@ export default function Home({ child, childKey, childrenList, onStart, onSwitch,
             ))}
           </div>
         )}
+        <button className="profiles-link" onClick={onProfiles}>Kids 👥</button>
       </main>
     </div>
   );

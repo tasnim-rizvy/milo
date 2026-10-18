@@ -20,7 +20,7 @@ export async function buildApp(opts = {}) {
   app.addHook('onRequest', async (req, reply) => {
     reply.header('access-control-allow-origin', '*');
     reply.header('access-control-allow-headers', 'content-type');
-    reply.header('access-control-allow-methods', 'GET,POST,OPTIONS');
+    reply.header('access-control-allow-methods', 'GET,POST,DELETE,OPTIONS');
     if (req.method === 'OPTIONS') return reply.code(204).send();
   });
 
@@ -28,6 +28,7 @@ export async function buildApp(opts = {}) {
     key: c.key, nickname: c.nickname, avatar: c.avatar, level: c.level,
     reading_band: c.reading_band, age_band: c.age_band, interests: c.interests,
     home_language: c.home_language, last_summary: c.last_summary,
+    total_stars: c.total_stars || 0, last_seen: c.last_seen || 0,
   });
 
   app.get('/api/health', async () => ({
@@ -39,6 +40,41 @@ export async function buildApp(opts = {}) {
   }));
 
   app.get('/api/children', async () => ({ children: store.children().map(summarizeChild) }));
+
+  // Kid profiles (the parent corner): create / remove a kid. Per-word progress
+  // rows are created lazily by the engine, so a fresh kid needs nothing else.
+  const AVATARS = ['🦊', '🐰', '🐼', '🦁', '🐸', '🐨', '🦄', '🐯'];
+  const slug = (s) => String(s || '').toLowerCase().normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20) || 'kid';
+
+  app.post('/api/children', async (req, reply) => {
+    const body = req.body || {};
+    const raw = String(body.nickname || '').replace(/\s+/g, ' ').trim();
+    if (raw.length < 1 || raw.length > 16) {
+      return reply.code(400).send({ error: 'nickname must be 1–16 characters' });
+    }
+    const avatar = AVATARS.includes(body.avatar) ? body.avatar : '🦊';
+    let key = `kid-${slug(raw)}`;
+    for (let i = 2; store.child(key); i++) key = `kid-${slug(raw)}-${i}`;
+    const child = {
+      key, nickname: raw, age_band: 4, reading_band: 'tap-first', avatar,
+      interests: [], home_language: '', level: 1, total_stars: 0,
+      created_at: Date.now(), first_try_correct: 0, first_try_total: 0,
+      last_summary: '', last_seen: 0,
+    };
+    store.saveChild(child);
+    return { ok: true, child: summarizeChild(child) };
+  });
+
+  app.delete('/api/children/:key', async (req, reply) => {
+    const key = req.params.key;
+    if (!store.child(key)) return reply.code(404).send({ error: 'no such child' });
+    if (store.children().length <= 1) {
+      return reply.code(400).send({ error: 'keep at least one kid profile' });
+    }
+    store.deleteChild(key);
+    return { ok: true, children: store.children().map(summarizeChild) };
+  });
 
   app.get('/api/progress/:key', async (req, reply) => {
     const child = store.child(req.params.key);
@@ -64,16 +100,20 @@ export async function buildApp(opts = {}) {
     const child = store.child(childKey);
     if (!child) return reply.code(404).send({ error: 'no such child' });
     const { id, turn } = createSession(store, child, intent);
-    // AI-warm the very first line (the scripted greeting is already in place as
-    // the fallback — a slow model never delays the session beyond its budget).
-    if (intent !== 'calm' && turn.messages?.length) {
+    // AI-warm the very first line (greeting or calm-corner opener). The scripted
+    // line is already in place as the fallback — a slow model never delays the
+    // session beyond its budget. One action → one bubble: it stays ONE message.
+    if (turn.messages?.length) {
+      const missed = intent !== 'calm' && !!(child.last_seen && Date.now() - child.last_seen > 20 * 3600e3);
+      const task = intent === 'calm'
+        ? { type: 'calm' }
+        : { type: 'greeting', name: child.nickname, missed };
       const llm = await composeFreeTurn({
-        task: { type: 'greeting', name: child.nickname },
-        child, store, input: '', history: [],
+        task, child, store, input: '', history: [],
         scriptedFallback: turn.messages[0].say,
       });
       if (llm.usedLLM) {
-        turn.messages[0] = { say: llm.say, mood: 'cheer' };
+        turn.messages[0] = { say: llm.say, mood: intent === 'calm' ? 'care' : 'cheer' };
         turn.dev = { ...(turn.dev || {}), llm: true, llmProvider: llm.provider || null };
       }
     }

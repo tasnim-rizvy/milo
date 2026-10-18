@@ -77,3 +77,29 @@ test('progress endpoint exposes dev-panel data', async (t) => {
   assert.ok(p.progress.length > 40);
   assert.ok(p.badges.length >= 1);
 });
+
+test('kid profiles: create, unique keys, validation, delete (never the last)', async (t) => {
+  const { app, base } = await start();
+  t.after(() => app.close());
+  const post = (body) => fetch(`${base}/api/children`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+
+  const a = await (await post({ nickname: 'Zoe', avatar: '🐰' })).json();
+  assert.equal(a.child.key, 'kid-zoe');
+  assert.equal(a.child.level, 1);
+  const b = await (await post({ nickname: 'Zoe' })).json();
+  assert.equal(b.child.key, 'kid-zoe-2');
+  assert.equal((await post({ nickname: '   ' })).status, 400);
+  assert.equal((await post({ nickname: 'x'.repeat(17) })).status, 400);
+
+  const del = await fetch(`${base}/api/children/kid-zoe-2`, { method: 'DELETE' });
+  assert.equal(del.status, 200);
+  assert.equal((await fetch(`${base}/api/children/nope`, { method: 'DELETE' })).status, 404);
+
+  const { children } = await (await fetch(`${base}/api/children`)).json();
+  for (const c of children.filter((c) => c.key !== 'kid-zoe')) {
+    await fetch(`${base}/api/children/${c.key}`, { method: 'DELETE' });
+  }
+  assert.equal((await fetch(`${base}/api/children/kid-zoe`, { method: 'DELETE' })).status, 400);
+});

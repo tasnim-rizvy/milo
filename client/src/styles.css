@@ -395,3 +395,51 @@ button { -webkit-tap-highlight-color: transparent; }
   .hello-card { font-size: 24px; }
   .lat-pill { display: none; }
 }
+
+/* ── Kid profiles / kid-profiles corner ─────────────────────── */
+.stars-tag {
+  margin-left: 8px; background: #FFF1F6; border-radius: 999px;
+  padding: 2px 12px; font-size: 13.5px; color: #B4567A;
+  font-family: 'Nunito', sans-serif;
+}
+.profiles-link {
+  margin-top: 6px; background: none; border: none; color: var(--muted-ink);
+  font-size: 13px; cursor: pointer; opacity: 0.75; font-family: 'Nunito', sans-serif;
+}
+.profiles-link:hover { opacity: 1; text-decoration: underline; }
+.gp-gate { display: flex; flex-direction: column; gap: 14px; align-items: center; padding: 12px 0 6px; }
+.gp-q { font-size: 22px; font-weight: 800; font-family: 'Baloo 2', ui-rounded, sans-serif; }
+.gp-row { display: flex; gap: 10px; width: 100%; max-width: 420px; }
+.gp-input {
+  flex: 1; min-width: 0; border: 3px solid var(--mist); border-radius: 16px;
+  padding: 12px 14px; font-size: 18px; font-family: 'Nunito', sans-serif; background: #fff;
+}
+.gp-err { color: #C0392B; font-size: 14px; }
+.gp-list { display: flex; flex-direction: column; gap: 10px; }
+.kid-row {
+  display: flex; align-items: center; gap: 10px; background: #fff;
+  border: 3px solid var(--mist); border-radius: 20px; padding: 10px 12px;
+}
+.kid-row.current { border-color: var(--orange); background: #FFF8F0; }
+.kid-ava { font-size: 30px; }
+.kid-meta { flex: 1; min-width: 0; }
+.kid-name { font-weight: 800; font-family: 'Baloo 2', ui-rounded, sans-serif; font-size: 19px; }
+.kid-sub { font-size: 13.5px; color: var(--muted-ink); }
+.kid-btn {
+  border: 2px solid var(--mist); background: #fff; border-radius: 999px;
+  padding: 7px 14px; font-weight: 800; font-size: 14px; cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+}
+.kid-btn.danger { color: #B03A2E; }
+.kid-btn.danger.on { background: #FDEBE7; border-color: #E6A79B; }
+.gp-add {
+  margin-top: 6px; background: #FBF7FF; border: 3px dashed #D9CBEF;
+  border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 10px;
+}
+.gp-add-title { font-weight: 800; font-family: 'Baloo 2', ui-rounded, sans-serif; font-size: 18px; color: #6C4BA0; }
+.avatar-pick { display: flex; gap: 8px; flex-wrap: wrap; }
+.ava {
+  font-size: 24px; background: #fff; border: 3px solid var(--mist);
+  border-radius: 16px; padding: 4px 8px; cursor: pointer;
+}
+.ava.on { border-color: #8E6BC7; background: #F4EDFF; }

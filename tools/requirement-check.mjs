@@ -170,7 +170,12 @@ async function main() {
     collect(CHAT_SCRIPTED);
     collect(SAFETY_REDIRECTS);
     const bad = strings.filter((s) => /\b(parents?|grown[- ]?ups?|adults?)\b/i.test(s));
-    ok('NO-PARENT', `all ${strings.length} user-facing lines never address parents/grown-ups`, bad.length === 0, bad.slice(0, 2).join(' | '));
+    // …and the visible UI copy of the client (JSX text + string literals; comments stripped)
+    const uiFiles = walkFiles(join(ROOT, 'client', 'src'), ['.jsx'], []);
+    const uiBad = uiFiles.flatMap((f) => readFileSync(f, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').split('\n')
+      .filter((l) => /\b(parents?|grown[- ]?ups?|adults?)\b/i.test(l)).map((l) => `${f.split('/').pop()}: ${l.trim()}`));
+    ok('NO-PARENT', `all ${strings.length} user-facing lines + client UI copy never address parents/grown-ups`, bad.length === 0 && uiBad.length === 0, bad.concat(uiBad).slice(0, 2).join(' | '));
   }
 
   writeFileSync(join(EVID, 'requirement-check.json'), JSON.stringify({
