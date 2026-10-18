@@ -55,6 +55,7 @@ export function buildLearnerCard(child, store, { loves = false } = {}) {
     struggling.length ? `Struggling words: ${struggling.join(', ')}.` : '',
     loves && child.interests?.length ? `Loves: ${child.interests.join(', ')}.` : '',
     child.home_language ? `Home language: ${child.home_language} (one tiny encouragement bridge max, never full translation).` : '',
+    child.moodNow ? `Mood right now (from the child's own words): ${child.moodNow} — match it gently.` : '',
     child.last_summary ? `Last session: ${child.last_summary}` : '',
   ].filter(Boolean).join('\n');
 }
@@ -100,10 +101,8 @@ function taskDirective(task) {
       return 'Right now: the child just opened up and shared their feelings — that was brave. Thank them warmly, then gently say what is next: a soft easy game, more talking, or a wave bye — those are the buttons below. Very short and gentle, no question.';
     case 'noOffer':
       return 'Right now: the child said no. Gently offer two choices: a little game, or a calm moment — those are the two buttons below. No other suggestions, no question — one short message.';
-    case 'mood':
-      return `Right now: the check-in chips are on screen and the child tapped "I feel ${task.moodLabel}". Mirror that feeling warmly${task.mood === 'sad' ? '; gently remind them they can talk to you, take a breathing break, or play something soft — those are the buttons below' : ' and say you will start right away'}. No question — one short message, the buttons come next.`;
     case 'greeting':
-      return `Right now: a brand-new session starts. Greet ${task.name} warmly in one short, cheerful phrase (a different way each time).${task.nod ? ` Add one tiny, playful nod to ONE thing they love (${task.nod}) — never list their likes, never say "I know you love".` : ' Do not mention what they love.'}${task.missed ? ' Welcome them back — it has been a little while and you missed them.' : ''} One short message.`;
+      return `Right now: a brand-new session starts. Greet ${task.name} warmly in one short, cheerful phrase (a different way each time).${task.missed ? ' Welcome them back — it has been a little while and you missed them.' : ''} One short message.`;
     case 'wonder':
       return `Right now: you asked the child "${task.question}" with two picture choices and they tapped "${task.picked}". ${task.right ? 'That was the answer.' : 'The other picture was the answer, but this is a lovely pick.'} The true fact: ${task.fact} React warmly and share the fact in very simple words, like a tiny wow. Celebrate the fact only — never say "not" about the other picture, never correct the child, never say "wrong". No question — the next thing pops up right after.`;
     case 'scaffold': {
@@ -179,7 +178,7 @@ export function splitPinnedTail(raw, tail) {
 // Task types that must NOT end in a question — the next bubble/task follows
 // immediately, so a question would dangle (a leftover "Want to play?" misleads
 // the child into answering something the UI doesn't offer).
-const QUIET_TASKS = new Set(['praise', 'growth', 'checkin', 'mood', 'breathe', 'invite', 'thanks', 'wonder']);
+const QUIET_TASKS = new Set(['praise', 'growth', 'checkin', 'breathe', 'invite', 'thanks', 'wonder']);
 
 // Programmatic checks on top of the sanitizer, per turn brief. Any failed
 // check sends the scripted twin instead — a scripted line is never a mystery.
@@ -223,7 +222,7 @@ export async function composeFreeTurn({ mode, task = null, child, store, input, 
 
   const interest = mode === 'conversation' && child.interests?.length && Math.random() < 0.4
     ? child.interests[Math.floor(Math.random() * child.interests.length)] : null;
-  const card = buildLearnerCard(child, store, { loves: !!interest || !!task?.nod });
+  const card = buildLearnerCard(child, store, { loves: !!interest });
   const user = buildChatPrompt({ card, mode, input, history, task, interest });
 
   const started = Date.now();

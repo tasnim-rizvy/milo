@@ -81,15 +81,15 @@ async function main() {
   ok('home: one big Let\'s go button + stickers, no menu of tiles', !!(await page.$('.start-btn')) && (await page.$$('.tile')).length === 0);
   await page.screenshot({ path: join(EVID, '01-home.png') });
 
-  // ── 2 · Maya L1 lesson: mood → wrong chip → correct chip ─────────────────
+  // ── 2 · Maya L1 lesson: hello + wonder puzzle → wrong chip → correct chip ─────────────────
   await clickText('.start-btn', 'go');
   await page.waitForFunction(() => (window.__milo?.n || 0) >= 1, { timeout: 15000 });
   await sleep(400);
   let m = await milo();
-  ok('greeting asks how Maya feels (mood chips)', m.options?.some((o) => o.id === 'mood-happy'));
+  ok('greeting opens with a wonder puzzle, no mood buttons', m.options?.some((o) => o.id === 'wonder-a') && !m.options?.some((o) => o.id.startsWith('mood-')));
   await page.screenshot({ path: join(EVID, '02-greeting.png') });
 
-  await clickText('.chip', 'happy');
+  await page.click('.chip');
   m = await waitTurn(1);
   const firstTask = m.expect?.type === 'chip' && m.options?.length >= 2;
   ok('first task shown with ≥2 chips (tap-only playable)', firstTask);
@@ -145,7 +145,7 @@ async function main() {
   await page.waitForSelector('.start-btn', { timeout: 15000 });
   await clickText('.start-btn', 'go');
   await page.waitForFunction(() => (window.__milo?.n || 0) >= 1, { timeout: 15000 });
-  await clickText('.chip', 'happy');
+  await page.click('.chip');
   m = await waitTurn(1);
 
   ok('gate-ready Aarav lands in the STAGE check', m.phase === 'STAGE', `phase=${m.phase}`);

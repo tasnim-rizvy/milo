@@ -52,7 +52,7 @@ async function main() {
   // ── R1 · Progressive L1–L3 (+ preloaded mid-L2 state & stage check) ───────
   {
     const maya = (await post('/api/session', { childKey: 'maya', intent: 'learn' }));
-    const t1 = await send(maya.sessionId, { type: 'chip', chipId: 'mood-happy' });
+    const t1 = await send(maya.sessionId, { type: 'chip', chipId: 'wonder-a' });
     ok('R1', 'L1 lesson runs: check-in → first task with chips', t1.options?.length >= 2 && !!t1.expect);
 
     const prog = await get('/api/progress/aarav');
@@ -61,24 +61,24 @@ async function main() {
       `coverage=${prog.stats.coverage} firstTry=${prog.stats.firstTryRate} days=${prog.stats.days}`);
 
     const aarav = await post('/api/session', { childKey: 'aarav', intent: 'learn' });
-    const t2 = await send(aarav.sessionId, { type: 'chip', chipId: 'mood-happy' });
+    const t2 = await send(aarav.sessionId, { type: 'chip', chipId: 'wonder-a' });
     ok('R1', 'gate-ready child enters the 5-task stage check', t2.dev?.phase === 'STAGE', `phase=${t2.dev?.phase}`);
   }
 
   // ── R2 · Mode detection (play / frustrated / tired / bored) ──────────────
   {
     const s = await post('/api/session', { childKey: 'maya', intent: 'learn' });
-    await send(s.sessionId, { type: 'chip', chipId: 'mood-happy' });
+    await send(s.sessionId, { type: 'chip', chipId: 'wonder-a' });
     const play = await send(s.sessionId, { type: 'text', text: 'i want plaay!' });
     ok('R2', '"i want plaay!" (typo) → 🎮 engagement with chips', play.mode === 'engagement' && play.options?.length >= 2, `mode=${play.mode}`);
 
     const s2 = await post('/api/session', { childKey: 'maya', intent: 'learn' });
-    await send(s2.sessionId, { type: 'chip', chipId: 'mood-happy' });
+    await send(s2.sessionId, { type: 'chip', chipId: 'wonder-a' });
     const tired = await send(s2.sessionId, { type: 'text', text: "i'm tired" });
     ok('R2', '"i\'m tired" → 💚 support mode', tired.mode === 'support', `mode=${tired.mode}`);
 
     const s3 = await post('/api/session', { childKey: 'maya', intent: 'learn' });
-    const task = await send(s3.sessionId, { type: 'chip', chipId: 'mood-happy' });
+    const task = await send(s3.sessionId, { type: 'chip', chipId: 'wonder-a' });
     let wrong = (task.options || []).find((o) => !task.expect.answers.includes(o.id));
     let third = null;
     for (let i = 0; i < 3; i += 1) {
@@ -90,7 +90,7 @@ async function main() {
   // ── R3 · SEL micro-moments (recast, calm, goodbye, praise) ───────────────
   {
     const s = await post('/api/session', { childKey: 'maya', intent: 'learn' });
-    const task = await send(s.sessionId, { type: 'chip', chipId: 'mood-happy' });
+    const task = await send(s.sessionId, { type: 'chip', chipId: 'wonder-a' });
     const wrong = (task.options || []).find((o) => !task.expect.answers.includes(o.id));
     const recast = await send(s.sessionId, { type: 'chip', chipId: wrong.id });
     ok('R3', 'recast after wrong chip — never says "wrong"', !/\bwrong\b/i.test(say(recast)));
@@ -142,7 +142,7 @@ async function main() {
     let gentle = true;
     for (const bad of list) {
       const s = await post('/api/session', { childKey: 'maya', intent: 'learn' });
-      await send(s.sessionId, { type: 'chip', chipId: 'mood-happy' });
+      await send(s.sessionId, { type: 'chip', chipId: 'wonder-a' });
       const r = await send(s.sessionId, { type: 'text', text: bad });
       if (r.safety === 'flagged') flagged += 1;
       if (/\bwrong\b/i.test(say(r)) || /(http|www\.)/i.test(say(r))) gentle = false;

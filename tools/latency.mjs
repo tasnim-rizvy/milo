@@ -32,8 +32,8 @@ const answerFor = (turn) => {
   if (!e) return { type: 'text', text: 'i like this game' };
   if (['chip', 'count', 'yes-no'].includes(e.type)) return { type: 'chip', chipId: e.answers[0] };
   if (e.type === 'word' || e.type === 'frame') return { type: 'text', text: e.answers[0] };
-  if (e.type === 'mood') return { type: 'chip', chipId: 'mood-happy' };
-  if (e.type === 'action') return { type: 'chip', chipId: 'mood-happy' };
+  if (e.type === 'wonder') return { type: 'chip', chipId: 'wonder-a' };
+  if (e.type === 'action') return { type: 'chip', chipId: 'wonder-a' };
   return { type: 'text', text: 'i like this game' };
 };
 
@@ -51,11 +51,11 @@ async function suiteA() {
   const ttft = [];
   const serves = [];
   let { sessionId, turn } = await postJson('/api/session', { childKey: 'maya', intent: 'learn' });
-  turn = (await sseSendTimed(sessionId, { type: 'chip', chipId: 'mood-happy' })).turn; // get into a task
+  turn = (await sseSendTimed(sessionId, { type: 'chip', chipId: 'wonder-a' })).turn; // get into a task
   for (let i = 0; i < 20; i++) {
     if (!turn || turn.effects?.endCard || turn.dev?.phase === 'DONE') {
       ({ sessionId, turn } = await postJson('/api/session', { childKey: 'maya', intent: 'learn' }));
-      await sseSendTimed(sessionId, { type: 'chip', chipId: 'mood-happy' });
+      await sseSendTimed(sessionId, { type: 'chip', chipId: 'wonder-a' });
       continue;
     }
     const input = answerFor(turn);
@@ -89,7 +89,7 @@ async function suiteB() {
     'i saw a big bird', 'i love my mom', 'i go to school', 'i like ice cream',
   ];
   const { sessionId } = await postJson('/api/session', { childKey: 'maya', intent: 'talk' });
-  await sseSendTimed(sessionId, { type: 'chip', chipId: 'mood-happy' });
+  await sseSendTimed(sessionId, { type: 'chip', chipId: 'wonder-a' });
   for (const text of texts) {
     let r = await sseSendTimed(sessionId, { type: 'text', text });
     // 429/timeout is not a normal-conditions sample — cool down, retry once.
@@ -116,7 +116,7 @@ async function suiteC() {
     const t0 = performance.now();
     const { sessionId, turn } = await postJson('/api/session', { childKey: 'aarav', intent: 'learn' });
     if (turn) serves.push(serveOf(turn)); // the greeting itself is LLM-backed now
-    const r = await sseSendTimed(sessionId, { type: 'chip', chipId: 'mood-happy' }); // → STAGE intro turn
+    const r = await sseSendTimed(sessionId, { type: 'chip', chipId: 'wonder-a' }); // → STAGE intro turn
     const serve = r.turn ? serveOf(r.turn) : 'none';
     if (r.turn) serves.push(serve);
     // A provider-error cold start never streamed — tally it, never sample it.

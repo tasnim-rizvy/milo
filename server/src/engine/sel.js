@@ -25,34 +25,16 @@ export const LINES = {
     'Look who is here — {name}! 🌟',
     'Hey {name}! My tail is wagging!',
   ],
+  wrapUp: [
+    'What a great time! Ready to say bye-bye?',
+    'We did so well today! Bye-bye time, or one more?',
+    'Milo is a little sleepy now. Bye-bye, or one more game?',
+  ],
   missedYou: [
     'I missed you, {name}! I kept our words warm. 🦊',
     'You came back! I kept your words safe. 🦊',
   ],
 
-  moodMirrorHappy: [
-    'Happy! Me too — my tail is wagging. High five! 🖐️',
-    'Yay, happy! Milo does a little dance! 💃 Let\'s learn!',
-    'Happy happy! That\'s my favorite feeling. Let\'s go! ⭐',
-    'Big happy! I can feel it from here. Off we go! 🎈',
-  ],
-  moodMirrorTired: [
-    'Sleepy… that\'s okay. We\'ll go slow and cozy. 🛏️',
-    'Tired is okay, {name}. Let\'s do easy games today. 🧸',
-    'Sleepy head! Milo will keep it gentle. 🌙',
-    'A sleepy day! Snuggle in — we\'ll take it easy. 🐢',
-  ],
-  moodMirrorSad: [
-    'Oh, a little sad. Thank you for telling me. Sad is okay — it comes and goes. 💛',
-    'A little sad… I\'m here with you. Want a quiet minute or a happy game? 🤗',
-    'Sad feelings are big. You were brave to say it. I\'ll stay with you. 💛',
-    'That\'s okay, {name}. Let\'s be gentle today. I\'m right here. 🦊',
-  ],
-  moodAmplify: [
-    'So happy! Me too! 🌈',
-    'Yay! Let\'s make today sparkle. ✨',
-    'Wonderful! High five! 🖐️',
-  ],
 
   // #2/#10 praise (≥6, effort-specific)
   praiseCorrect: [
@@ -398,11 +380,6 @@ export const LINES = {
     'Great playing, {name}! Bye-bye — Milo waves! 👋 Tomorrow: a jungle adventure 🌴 — I heard a BIG sound!',
     'Bye-bye, {name}! Milo is waving! 👋 Tomorrow we visit the jungle 🌴 and meet someone VERY big!',
   ],
-  moodEnd: [
-    'One last thing — how do you feel now?',
-    'Before bye-bye: how do you feel now?',
-    'Quick check! How do you feel right now?',
-  ],
 };
 
 // Conversation-mode reply for free chat (scripted fallback when LLM is off).
@@ -415,38 +392,6 @@ export const CHAT_SCRIPTED = [
   'Ha ha, that is funny! Let\'s pretend we are birds. Flap flap! 🐦',
   'Oooh! If you had a magic wand, what would you make? ✨',
   'Super! Here is a Milo fact: stars are really far away. ⭐ Can you count to three with me?',
-];
-
-// Session openers. Mood is asked in three child-friendly styles (the chips keep the
-// engine ids mood-happy / mood-sleepy / mood-sad, so nothing downstream changes).
-export const MOOD_STYLES = [
-  {
-    id: 'plain',
-    asks: ['How do you feel today? 🦊', 'How do you feel right now? 🎈', 'How are you feeling today? 💛'],
-    chips: [
-      { id: 'mood-happy', label: 'happy', emoji: '😊' },
-      { id: 'mood-sleepy', label: 'sleepy', emoji: '😴' },
-      { id: 'mood-sad', label: 'a little sad', emoji: '😢' },
-    ],
-  },
-  {
-    id: 'weather',
-    asks: ['What is the weather inside you today? 🌤️', 'Is it sunny or rainy inside you today? 🌈'],
-    chips: [
-      { id: 'mood-happy', label: 'sunny', emoji: '☀️' },
-      { id: 'mood-sleepy', label: 'sleepy moon', emoji: '🌙' },
-      { id: 'mood-sad', label: 'rainy', emoji: '🌧️' },
-    ],
-  },
-  {
-    id: 'animal',
-    asks: ['Which animal are you today? 🐾', 'Are you a bunny, a bear, or a mouse today? 🐾'],
-    chips: [
-      { id: 'mood-happy', label: 'bouncy bunny', emoji: '🐰' },
-      { id: 'mood-sleepy', label: 'sleepy bear', emoji: '🐻' },
-      { id: 'mood-sad', label: 'quiet mouse', emoji: '🐭' },
-    ],
-  },
 ];
 
 // "Wonder" openers: a tiny guess-it question with two picture choices. There is no

@@ -52,6 +52,32 @@ export function looksHomeLanguage(raw) {
   return words.some((w) => HOME_WORDS.includes(w));
 }
 
+// Feelings the child states in their own words (never asked with buttons). Strong
+// negative words count anywhere; "happy"-type words only when said as a feeling
+// ("I am happy", "so excited", or the word on its own), so "good dog" is not a mood.
+const FEELINGS = [
+  ['sad', /\b(sad|crying|cry|unhappy|upset)\b/],
+  ['angry', /\b(angry|mad|furious|grumpy)\b/],
+  ['scared', /\b(scared|afraid|frightened)\b/],
+  ['worried', /\b(worried|nervous)\b/],
+  ['lonely', /\b(lonely|alone)\b/],
+  ['sleepy', /\b(sleepy|tired|sleep)\b/],
+];
+const HAPPY_WORDS = 'happy|great|good|fine|excited|glad|awesome|wonderful|joyful';
+export function detectMood(raw) {
+  const t = normalize(raw);
+  if (!t) return null;
+  if (new RegExp(`\\bnot (very |so )?(${HAPPY_WORDS})\\b`).test(t)) return 'sad';
+  for (const [mood, rx] of FEELINGS) {
+    if (!rx.test(t)) continue;
+    if (new RegExp(`\\b(not|never) (very |so )?(${rx.source.slice(3, -3)})\\b`).test(t)) return null; // "i am not sad"
+    return mood;
+  }
+  if (new RegExp(`\\b(i am|im|i feel|feel|feeling|so|very)\\s+(${HAPPY_WORDS})\\b`).test(t)) return 'happy';
+  if (new RegExp(`^(${HAPPY_WORDS}|yay|yes yay)$`).test(t)) return 'happy';
+  return null;
+}
+
 // Classify a child input that was NOT a recognized answer attempt.
 // ctx: { noStreak, dontKnowCount, mode (current sticky), conversationTurns }
 export function classifyInput(raw, ctx = {}) {

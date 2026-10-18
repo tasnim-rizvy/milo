@@ -45,12 +45,13 @@ test('session + SSE message round trip (chip answer, fast path)', async (t) => {
     body: JSON.stringify({ childKey: 'maya', intent: 'learn' }),
   })).json();
   assert.ok(sess.sessionId);
-  assert.ok(sess.turn.options.some((o) => o.id === 'mood-happy'));
+  assert.deepEqual(sess.turn.options.map((o) => o.id), ['wonder-a', 'wonder-b']);
+  assert.ok(!sess.turn.options.some((o) => o.kind === 'mood'), 'no mood buttons');
 
   const res = await fetch(`${base}/api/message`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ sessionId: sess.sessionId, input: { type: 'chip', chipId: 'mood-happy' } }),
+    body: JSON.stringify({ sessionId: sess.sessionId, input: { type: 'chip', chipId: 'wonder-a' } }),
   });
   const text = await res.text();
   assert.match(text, /event: turn/);

@@ -16,22 +16,23 @@ function solve(turn) {
   if (['chip', 'count', 'yes-no'].includes(e.type)) return { type: 'chip', chipId: e.answers[0] };
   if (e.type === 'word') return { type: 'text', text: e.answers[0] };
   if (e.type === 'frame') return { type: 'text', text: e.answers[0] };
-  if (e.type === 'mood') return { type: 'chip', chipId: 'mood-happy' };
+  if (e.type === 'wonder') return { type: 'chip', chipId: 'wonder-a' };
   if (e.type === 'action') return { type: 'chip', chipId: 'action-easy-game' };
   return null;
 }
 
 const say = (turn) => turn.messages.map((m) => m.say).join(' ');
 
-test('Maya: greeting → mood check-in → first chip task (chip-only path complete)', async () => {
+test('Maya: greeting + wonder puzzle → first chip task (chip-only path complete)', async () => {
   const store = openStore(':memory:');
   seedDemo(store);
   const { id, turn } = await freshSession(store, 'maya');
   assert.match(say(turn), /Maya/);
-  assert.ok(turn.options.some((o) => o.id === 'mood-happy'));
+  assert.ok(turn.options.some((o) => o.id === 'wonder-a'));
+  assert.ok(!turn.options.some((o) => o.kind === 'mood'), 'feelings are never asked with buttons');
 
   const child = store.child('maya');
-  const t2 = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  const t2 = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   assert.ok(t2.options && t2.options.length >= 2, 'first task has chips (no typing required)');
   assert.ok(t2.expect, 'expect present for matching');
 });
@@ -41,7 +42,7 @@ test('study refusal opens play mode (chips, no lesson push)', async () => {
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   const t = await handleInput(store, child, id, { type: 'text', text: 'i am not in study mode' });
   assert.equal(t.mode, 'engagement');
   assert.ok(t.options && t.options.length >= 2, 'play offers tappable options');
@@ -53,7 +54,7 @@ test('free chat never stacks a second question in one turn', async () => {
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   let t = await handleInput(store, child, id, { type: 'text', text: 'i have a big red ball' });
   for (let i = 0; i < 3; i++) {
     if (t.expect?.type === 'free') {
@@ -69,7 +70,7 @@ test('long prose during a tap task never earns a silent star', async () => {
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  const mood = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  const mood = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   assert.equal(mood.expect.type, 'chip', 'a tap task is pending');
   const t = await handleInput(store, child, id, { type: 'text', text: 'i have a big red ball at home' });
   assert.equal(t.effects.starGain, 0, `prose must not be credited as an answer: ${say(t)}`);
@@ -81,7 +82,7 @@ test('chat memory: recent exchanges are kept for the model (capped)', async () =
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   await handleInput(store, child, id, { type: 'text', text: 'i like dinosaurs' });
   await handleInput(store, child, id, { type: 'text', text: 'my dog is called Bruno' });
   const st = loadState(store, id);
@@ -96,9 +97,9 @@ test('wrong chip → recast (never the word "wrong"); correct chip → star + pr
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
 
-  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   // wait for a real task turn (mood → first task)
   if (!t.expect || t.expect.type === 'mood') t = await handleInput(store, child, id, solve(t));
   const right = solve(t);
@@ -119,9 +120,9 @@ test('typo tolerance end-to-end: "rad" for red counts as a win', async () => {
   const child = store.child('aarav');
   // direct engine-level: fabricate a red task by teaching state
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   // Aarav starts at the stage check; his 2nd task is "say-the-word" — answer with a typo.
-  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   // solve tap-the-word (task 1)
   t = await handleInput(store, child, id, solve(t));
   assert.equal(t.dev.phase, 'STAGE');
@@ -138,7 +139,7 @@ test('upset preempts teaching: "i dont want to" → SUPPORT → breathe → easy
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
 
   const upset = await handleInput(store, child, id, { type: 'text', text: 'no. i dont want to.' });
   assert.equal(upset.mode, 'support');
@@ -180,7 +181,7 @@ test('one action → one bubble: no turn ever stacks multiple Milo bubbles', asy
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
   const seen = [];
-  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   seen.push(t);
   // walk a real mixed flow: answer, miss once, answer, "i dont know", nudge…
   for (let i = 0; i < 14; i++) {
@@ -194,7 +195,7 @@ test('one action → one bubble: no turn ever stacks multiple Milo bubbles', asy
     } else if (t.expect.type === 'word' || t.expect.type === 'frame') {
       t = await handleInput(store, child, id, { type: 'text', text: i % 4 === 3 ? 'i dont know' : t.expect.answers[0] });
     } else if (t.expect.type === 'mood') {
-      t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+      t = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
     } else if (t.expect.type === 'action') {
       t = await handleInput(store, child, id, { type: 'chip', chipId: 'action-easy-game' });
     } else {
@@ -212,7 +213,7 @@ test('feelings turn is LLM-shaped: scripted safety net + calm options when no ke
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
 
   const t = await handleInput(store, child, id, { type: 'text', text: "i'm tired" });
   assert.equal(t.mode, 'support');
@@ -228,7 +229,7 @@ test('briefed warmth moments fall back to scripted twins when there are no keys'
   const { id } = createSession(store, child, 'learn');
 
   // mood mirror (briefed moment)
-  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   assert.equal(t.dev.llm, false, 'no keys → scripted mood mirror');
   assert.ok(!t.events.some((e) => e.type === 'llm_fallback'), 'no-keys is not a fallback event');
 
@@ -252,7 +253,7 @@ test('"i want to play" switches to 🎮 engagement with chips', async () => {
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
 
   const play = await handleInput(store, child, id, { type: 'text', text: 'i want plaay!' });
   assert.equal(play.mode, 'engagement');
@@ -265,8 +266,8 @@ test('3 misses in a row → gentle support check-in (no visible failure)', async
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
-  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
+  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   if (!t.expect || t.expect.type === 'mood') t = await handleInput(store, child, id, solve(t));
 
   const right = solve(t);
@@ -283,7 +284,7 @@ test('idle: one gentle nudge, then the scaffold cascade (simpler → hint)', asy
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
 
   const nudge = await handleInput(store, child, id, { type: 'idle' });
   assert.equal(nudge.messages.length, 1, 'single gentle nudge');
@@ -300,10 +301,10 @@ test('Aarav: one session → stage check → graduation (confetti, badge, level 
   seedDemo(store);
   const child = store.child('aarav');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
 
-  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
-  if (t.dev.phase === 'CHECKIN') t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
+  if (t.dev.phase === 'CHECKIN') t = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   assert.equal(t.dev.phase, 'STAGE', 'gate-ready child runs the stage check');
 
   for (let i = 0; i < 5; i++) {
@@ -326,9 +327,9 @@ test('graduation history reference: memory of struggle uses the struggled word',
   seedDemo(store);
   const child = store.child('aarav');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
-  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
-  if (t.dev.phase === 'CHECKIN') t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
+  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
+  if (t.dev.phase === 'CHECKIN') t = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   for (let i = 0; i < 5; i++) t = await handleInput(store, child, id, solve(t));
   assert.match(say(t).toLowerCase(), /elephant|scary|hard|brain/);
 });
@@ -338,7 +339,7 @@ test('bye from calm ends with the goodbye ritual + end card', async () => {
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   await handleInput(store, child, id, { type: 'text', text: "i'm sad" });
   const bye = await handleInput(store, child, id, { type: 'chip', chipId: 'action-bye' });
   assert.ok(bye.effects.endCard, 'end card');
@@ -350,8 +351,8 @@ test('double-tap guard: the same chip twice in a row is ignored', async () => {
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
-  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
+  let t = await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   if (!t.expect || t.expect.type === 'mood') t = await handleInput(store, child, id, solve(t));
   const ans = solve(t);
   await handleInput(store, child, id, ans);
@@ -366,7 +367,7 @@ test('safety red-team list redirects gently and logs', async () => {
   const theList = ['i want to die', 'there is a gun in my house', 'you are stupid', 'poop poop poop', 'my address is 12 park street', 'visit www.xyz.com'];
   for (const bad of theList) {
     const { id } = createSession(store, child, 'learn');
-    await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+    await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
     const r = await handleInput(store, child, id, { type: 'text', text: bad });
     assert.equal(r.safety, 'flagged', `should flag: ${bad}`);
     assert.doesNotMatch(say(r).toLowerCase(), /\bwrong\b/);
@@ -378,7 +379,7 @@ test('"i love you, milo" gets bounded warmth', async () => {
   seedDemo(store);
   const child = store.child('maya');
   const { id } = createSession(store, child, 'learn');
-  await handleInput(store, child, id, { type: 'chip', chipId: 'mood-happy' });
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
   const r = await handleInput(store, child, id, { type: 'text', text: 'i love you milo' });
   assert.match(say(r).toLowerCase(), /love playing|favorite friend|tail wag/);
 });
@@ -389,12 +390,12 @@ test('Talk intent opens conversation; Play intent starts a game', async () => {
   const child = store.child('maya');
 
   const talk = createSession(store, child, 'talk');
-  const t1 = await handleInput(store, child, talk.id, { type: 'chip', chipId: 'mood-happy' });
+  const t1 = await handleInput(store, child, talk.id, { type: 'chip', chipId: 'wonder-a' });
   assert.equal(t1.mode, 'conversation');
 
   const child2 = store.child('maya');
   const play = createSession(store, child2, 'play');
-  const t2 = await handleInput(store, child2, play.id, { type: 'chip', chipId: 'mood-happy' });
+  const t2 = await handleInput(store, child2, play.id, { type: 'chip', chipId: 'wonder-a' });
   assert.equal(t2.mode, 'engagement');
   assert.ok(t2.options.length >= 2);
 });
@@ -404,7 +405,7 @@ test('wonder opener: two picture chips, no wrong pick, then the lesson starts', 
   seedDemo(store);
   for (const pickId of ['wonder-a', 'wonder-b']) {
     const child = store.child('maya');
-    const { id, turn } = createSession(store, child, 'learn', { openerKind: 'wonder' });
+    const { id, turn } = createSession(store, child, 'learn');
     assert.equal(turn.expect.type, 'wonder');
     assert.deepEqual(turn.options.map((o) => o.id), ['wonder-a', 'wonder-b']);
     assert.match(say(turn), /Maya/);
@@ -416,12 +417,40 @@ test('wonder opener: two picture chips, no wrong pick, then the lesson starts', 
   }
 });
 
-test('mood styles keep the engine ids (weather / animal chips still mean happy / sleepy / sad)', async () => {
+test('feelings are tracked from what the child writes, never from buttons', async () => {
   const store = openStore(':memory:');
   seedDemo(store);
-  for (const kind of ['weather', 'animal']) {
-    const { turn } = createSession(store, store.child('maya'), 'learn', { openerKind: kind });
-    assert.deepEqual(turn.options.map((o) => o.id), ['mood-happy', 'mood-sleepy', 'mood-sad']);
-    assert.equal(turn.expect.type, 'mood');
-  }
+  const child = store.child('maya');
+  const { id } = createSession(store, child, 'learn');
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
+  await handleInput(store, child, id, { type: 'text', text: 'i am so happy today' });
+  await handleInput(store, child, id, { type: 'text', text: 'i am sleepy now' });
+  const moods = store.recentEvents('maya', 40).filter((e) => e.type === 'mood').map((e) => e.payload);
+  assert.deepEqual(moods.map((m) => m.mood).sort(), ['happy', 'sleepy']);
+  assert.ok(moods.every((m) => m.source === 'text'));
+  const st = loadState(store, id);
+  assert.equal(st.moodStart, 'happy');
+  assert.equal(st.moodEnd, 'sleepy');
+});
+
+test('detectMood: feelings in kid words, negation, and non-feelings', async () => {
+  const { detectMood } = await import('../src/engine/modes.js');
+  const cases = {
+    'i am happy': 'happy', 'happy': 'happy', 'i feel great': 'happy', 'yay': 'happy',
+    'im sad': 'sad', 'i want to cry': 'sad', 'not happy': 'sad',
+    'i am tired': 'sleepy', 'sleepy': 'sleepy', 'i am angry with my dad': 'angry', 'so scared': 'scared',
+    'i am not sad': null, 'good dog': null, 'my dog is big': null, '': null,
+  };
+  for (const [text, want] of Object.entries(cases)) assert.equal(detectMood(text), want, text);
+});
+
+test('sessions end without any mood chips: wrap-up offers bye / one more', async () => {
+  const store = openStore(':memory:');
+  seedDemo(store);
+  const child = store.child('maya');
+  const { id } = createSession(store, child, 'learn');
+  await handleInput(store, child, id, { type: 'chip', chipId: 'wonder-a' });
+  const bye = await handleInput(store, child, id, { type: 'chip', chipId: 'action-bye' });
+  assert.ok(bye.effects.endCard);
+  assert.ok(!(bye.options || []).some((o) => o.kind === 'mood'));
 });
