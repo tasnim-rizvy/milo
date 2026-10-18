@@ -95,8 +95,8 @@ test('kid profiles: create, unique keys, validation, delete', async (t) => {
   const r6 = await (await post({ nickname: 'Rey', age: 6, reads: true, interests: ['space', 'bogus', 'cars', 'music', 'robots'], home_language: 'Hindi' })).json();
   assert.equal(r6.child.level, 2);
   assert.equal(r6.child.reading_band, 'tap-and-type');
-  assert.deepEqual(r6.child.interests, ['space', 'cars', 'music']);
-  assert.equal(r6.child.home_language, 'Hindi');
+  assert.deepEqual(r6.child.interests, ['space', 'cars', 'music', 'robots']);
+  assert.equal(r6.child.home_language, '');
   const b = await (await post({ nickname: 'Zoe', age: 4 })).json();
   assert.equal(b.child.key, 'kid-zoe-2');
   assert.equal((await post({ nickname: '   ', age: 4 })).status, 400);

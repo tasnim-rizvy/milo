@@ -69,13 +69,12 @@ export async function buildApp(opts = {}) {
     const reads = body.reads === true;
     const avatar = AVATARS.includes(body.avatar) ? body.avatar : '🦊';
     const interests = [...new Set(Array.isArray(body.interests) ? body.interests : [])]
-      .filter((i) => INTERESTS.includes(i)).slice(0, 3);
-    const home_language = String(body.home_language || '').replace(/\s+/g, ' ').trim().slice(0, 20);
+      .filter((i) => INTERESTS.includes(i));
     let key = `kid-${slug(raw)}`;
     for (let i = 2; store.child(key); i++) key = `kid-${slug(raw)}-${i}`;
     const child = {
       key, nickname: raw, age_band: age, reading_band: reads ? 'tap-and-type' : 'tap-first', avatar,
-      interests, home_language, level: age >= 6 && reads ? 2 : 1, total_stars: 0,
+      interests, home_language: '', level: age >= 6 && reads ? 2 : 1, total_stars: 0,
       created_at: Date.now(), first_try_correct: 0, first_try_total: 0,
       last_summary: '', last_seen: 0,
     };

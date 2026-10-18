@@ -14,19 +14,18 @@ export default function ProfileForm({ onSubmit, submitLabel = 'Start playing' })
   const [avatar, setAvatar] = useState('🦊');
   const [reads, setReads] = useState(null);
   const [interests, setInterests] = useState([]);
-  const [lang, setLang] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const ready = nickname.trim() && age && reads !== null && !busy;
-  const toggle = (i) => setInterests((s) => (s.includes(i) ? s.filter((x) => x !== i) : s.length < 3 ? [...s, i] : s));
+  const toggle = (i) => setInterests((s) => (s.includes(i) ? s.filter((x) => x !== i) : [...s, i]));
 
   const submit = async () => {
     if (!ready) return;
     setBusy(true);
     setError('');
     try {
-      await onSubmit({ nickname: nickname.trim(), age, avatar, reads, interests, home_language: lang.trim() });
+      await onSubmit({ nickname: nickname.trim(), age, avatar, reads, interests });
     } catch {
       setError('Hmm, that did not work — check your name and try again.');
       setBusy(false);
@@ -64,15 +63,12 @@ export default function ProfileForm({ onSubmit, submitLabel = 'Start playing' })
         <button className={`pf-pill ${reads === false ? 'on' : ''}`} onClick={() => setReads(false)}>👆 Not yet</button>
       </div>
 
-      <label className="pf-label">What do you love? <span className="pf-hint">(up to 3)</span></label>
+      <label className="pf-label">What do you love? <span className="pf-hint">(pick any)</span></label>
       <div className="pf-row wrap">
         {INTERESTS.map(([i, e]) => (
           <button key={i} className={`pf-pill ${interests.includes(i) ? 'on' : ''}`} onClick={() => toggle(i)}>{e} {i}</button>
         ))}
       </div>
-
-      <label className="pf-label">Another language at home? <span className="pf-hint">(optional)</span></label>
-      <input className="gp-input" value={lang} maxLength={20} placeholder="e.g. Hindi, Bangla" onChange={(e) => setLang(e.target.value)} />
 
       {error ? <div className="gp-err">{error}</div> : null}
       <button className="btn-primary pf-go" disabled={!ready} onClick={submit}>{submitLabel}</button>
