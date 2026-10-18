@@ -112,3 +112,17 @@ test('kid profiles: create, unique keys, validation, delete (never the last)', a
   }
   assert.equal((await fetch(`${base}/api/children/kid-zoe`, { method: 'DELETE' })).status, 400);
 });
+
+test('cross-origin writes are refused; same-origin writes pass; no CORS headers', async (t) => {
+  const { app, base } = await start();
+  t.after(() => app.close());
+  const body = JSON.stringify({ nickname: 'Eve', age: 4 });
+  const h = { 'content-type': 'application/json' };
+  const evil = await fetch(`${base}/api/children`, { method: 'POST', headers: { ...h, origin: 'https://evil.example' }, body });
+  assert.equal(evil.status, 403);
+  const del = await fetch(`${base}/api/children/maya`, { method: 'DELETE', headers: { origin: 'https://evil.example' } });
+  assert.equal(del.status, 403);
+  const ok = await fetch(`${base}/api/children`, { method: 'POST', headers: { ...h, origin: base }, body });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.headers.get('access-control-allow-origin'), null);
+});

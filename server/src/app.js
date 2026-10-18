@@ -17,11 +17,17 @@ export async function buildApp(opts = {}) {
   if (!opts.noSeed) seedDemo(store);
   app.decorate('miloStore', store);
 
+  // Same-origin only: the built client is served by this server and the Vite dev
+  // server proxies /api, so no CORS headers are sent. State-changing requests that
+  // carry a foreign Origin (a page on another site) are refused outright.
   app.addHook('onRequest', async (req, reply) => {
-    reply.header('access-control-allow-origin', '*');
-    reply.header('access-control-allow-headers', 'content-type');
-    reply.header('access-control-allow-methods', 'GET,POST,DELETE,OPTIONS');
-    if (req.method === 'OPTIONS') return reply.code(204).send();
+    if (req.method === 'GET' || req.method === 'HEAD') return;
+    const origin = req.headers.origin;
+    if (origin) {
+      let host = '';
+      try { host = new URL(origin).host; } catch { /* malformed → refuse */ }
+      if (host !== req.headers.host) return reply.code(403).send({ error: 'cross-origin request refused' });
+    }
   });
 
   const summarizeChild = (c) => ({
