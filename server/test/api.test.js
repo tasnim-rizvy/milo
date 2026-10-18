@@ -4,10 +4,11 @@ import { buildApp } from '../src/app.js';
 import { openStore } from '../src/store.js';
 
 async function start() {
-  const app = await buildApp({ store: openStore(':memory:'), seed: true });
+  const store = openStore(':memory:');
+  const app = await buildApp({ store, seed: true });
   await app.listen({ port: 0, host: '127.0.0.1' });
   const base = `http://127.0.0.1:${app.server.address().port}`;
-  return { app, base };
+  return { app, base, store };
 }
 
 function parseTurn(sseText) {
@@ -130,7 +131,7 @@ test('cross-origin writes are refused; same-origin writes pass; no CORS headers'
 });
 
 test('profiles are private to their device (list, play, progress, delete); demo kids are shared but undeletable', async (t) => {
-  const { app, base } = await start();
+  const { app, base, store } = await start();
   t.after(() => app.close());
   const A = { 'x-milo-device': 'device-aaaaaaaaaaaaaaaa' };
   const B = { 'x-milo-device': 'device-bbbbbbbbbbbbbbbb' };
@@ -154,6 +155,11 @@ test('profiles are private to their device (list, play, progress, delete); demo 
   const sess = await (await fetch(`${base}/api/session`, { method: 'POST', headers: { ...json, ...A }, body: JSON.stringify({ childKey: ann.key, intent: 'learn' }) })).json();
   const stolen = await fetch(`${base}/api/message`, { method: 'POST', headers: { ...json, ...B }, body: JSON.stringify({ sessionId: sess.sessionId, input: { type: 'text', text: 'hi' } }) });
   assert.equal(stolen.status, 404);
+
+  // an unowned legacy row is never shared, even in demo mode
+  store.saveChild({ key: 'legacy', nickname: 'Old', age_band: 4, reading_band: 'tap-first', avatar: '🦊', interests: [], level: 1 });
+  assert.ok(!(await keysFor(B)).includes('legacy'));
+  assert.ok(!(await keysFor(A)).includes('legacy'));
 
   // shared demo fixtures: visible to everyone, never deletable
   assert.ok((await keysFor(B)).includes('maya'));

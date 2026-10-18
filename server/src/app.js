@@ -37,9 +37,13 @@ export async function buildApp(opts = {}) {
     return /^[A-Za-z0-9-]{16,64}$/.test(d) ? d : '';
   };
   // Unowned rows are the shared demo fixtures — visible only when demo mode is on
-  // (older unowned profiles from before ownership existed stay hidden, never shared).
+  // (older unowned profiles from before ownership existed stay hidden, never shared —
+  only the two seeded fixture keys are ever shared).
   const demoOn = !!(opts.seed ?? config.seedDemo);
-  const canUse = (child, device) => !!child && ((child.owner === '' && demoOn) || (device !== '' && child.owner === device));
+  const DEMO_KEYS = new Set(['maya', 'aarav']);
+  const canUse = (child, device) => !!child && (
+    (demoOn && child.owner === '' && DEMO_KEYS.has(child.key)) || (device !== '' && child.owner === device)
+  );
 
   const summarizeChild = (c) => ({
     key: c.key, nickname: c.nickname, avatar: c.avatar, level: c.level,
