@@ -199,6 +199,14 @@ export function taskViolations(task, text, history = []) {
 // Compose one LLM-backed line (free chat, a feelings reply, or a briefed
 // micro-moment). The returned `reason` is set when the scripted twin served:
 // 'no-keys' | 'error' | 'rejected' (safety filter or a failed brief check).
+let lastProviderLog = 0;
+function logProviderError(provider, full) {
+  const t = Date.now();
+  if (t - lastProviderLog < 30000) return; // at most one line per 30 s
+  lastProviderLog = t;
+  console.warn(`[llm] ${provider.name}/${provider.model}: ${full.slice(0, 400)}`);
+}
+
 export async function composeFreeTurn({ mode, task = null, child, store, input, history = [], scriptedFallback }, onChunk = null) {
   const providers = llmProviders();
   if (!providers.length) return { say: scriptedFallback, usedLLM: false, ms: 0, reason: 'no-keys' };
@@ -253,7 +261,11 @@ export async function composeFreeTurn({ mode, task = null, child, store, input, 
       return { say: clean.text, usedLLM: true, ms: Date.now() - started, provider: provider.name, model: provider.model };
     } catch (e) {
       // fall through to the next provider — but remember why (429, ttft-budget, …)
-      lastError = String(e?.message || e).slice(0, 400);
+      const full = String(e?.message || e);
+      // client-visible events get only a coarse code ("llm-http-429", "ttft-budget"…);
+      // the provider's full text (org ids, limits) stays in the server log
+      lastError = full.split(' ')[0].slice(0, 40);
+      logProviderError(provider, full);
     }
   }
   return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started, reason: 'error', detail: lastError };
