@@ -5,11 +5,11 @@ const j = async (res) => {
 };
 
 export const getChildren = () => fetch('/api/children').then(j);
-export const addChild = (nickname, avatar) =>
+export const addChild = (profile) =>
   fetch('/api/children', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ nickname, avatar }),
+    body: JSON.stringify(profile),
   }).then(j);
 export const removeChild = (key) =>
   fetch(`/api/children/${encodeURIComponent(key)}`, { method: 'DELETE' }).then(j);

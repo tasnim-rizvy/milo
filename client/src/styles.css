@@ -443,3 +443,22 @@ button { -webkit-tap-highlight-color: transparent; }
   border-radius: 16px; padding: 4px 8px; cursor: pointer;
 }
 .ava.on { border-color: #8E6BC7; background: #F4EDFF; }
+
+/* ── Profile form ─────────────────────────────────────────── */
+.pf { display: flex; flex-direction: column; gap: 10px; }
+.pf-label { font-weight: 800; font-family: 'Baloo 2', ui-rounded, sans-serif; font-size: 17px; margin-top: 4px; }
+.pf-hint { font-weight: 600; font-size: 13px; color: var(--muted-ink); font-family: 'Nunito', sans-serif; }
+.pf-row { display: flex; gap: 8px; }
+.pf-row.wrap { flex-wrap: wrap; }
+.pf-pill {
+  border: 3px solid var(--mist); background: #fff; border-radius: 999px; padding: 8px 14px;
+  font-size: 15px; font-weight: 800; cursor: pointer; font-family: 'Nunito', sans-serif;
+}
+.pf-pill.big { font-size: 24px; padding: 6px 26px; font-family: 'Baloo 2', ui-rounded, sans-serif; }
+.pf-pill.on { border-color: var(--orange); background: #FFF1E0; }
+.pf-go { margin-top: 8px; align-self: stretch; }
+.pf-go:disabled { opacity: 0.5; cursor: not-allowed; }
+.new-kid-btn {
+  margin-top: 4px; border: 3px dashed var(--orange); background: #FFF8F0; border-radius: 999px;
+  padding: 8px 18px; font-weight: 800; cursor: pointer; font-family: 'Nunito', sans-serif; font-size: 15px;
+}

@@ -1,6 +1,5 @@
 import { useState } from 'react';
-
-const AVATARS = ['🦊', '🐰', '🐼', '🦁', '🐸', '🐨', '🦄', '🐯'];
+import ProfileForm from './ProfileForm.jsx';
 
 const ago = (ts) => {
   if (!ts) return 'new';
@@ -18,8 +17,6 @@ export default function KidProfiles({ childrenList = [], childKey, onSwitch, onA
   const [answer, setAnswer] = useState('');
   const [passed, setPassed] = useState(false);
   const [gateErr, setGateErr] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [avatar, setAvatar] = useState('🦊');
   const [confirmKey, setConfirmKey] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -27,21 +24,6 @@ export default function KidProfiles({ childrenList = [], childKey, onSwitch, onA
   const tryGate = () => {
     if (Number(answer) === gate.a + gate.b) { setPassed(true); setGateErr(''); }
     else { setGateErr('Not quite — try again 🙈'); setAnswer(''); }
-  };
-
-  const add = async () => {
-    const name = nickname.trim();
-    if (!name || busy) return;
-    setBusy(true);
-    setError('');
-    try {
-      await onAdd({ nickname: name, avatar });
-      onClose(); // the new kid is selected — straight back home to play
-    } catch (e) {
-      setError(String(e?.message || '').includes('400') ? 'Name must be 1–16 letters.' : 'Could not add — try again.');
-    } finally {
-      setBusy(false);
-    }
   };
 
   const remove = async (key) => {
@@ -115,29 +97,10 @@ export default function KidProfiles({ childrenList = [], childKey, onSwitch, onA
 
             <div className="gp-add">
               <div className="gp-add-title">＋ Add a kid</div>
-              <div className="avatar-pick">
-                {AVATARS.map((a) => (
-                  <button
-                    key={a}
-                    className={`ava ${a === avatar ? 'on' : ''}`}
-                    aria-label={`avatar ${a}`}
-                    onClick={() => setAvatar(a)}
-                  >
-                    {a}
-                  </button>
-                ))}
-              </div>
-              <div className="gp-row">
-                <input
-                  className="gp-input"
-                  value={nickname}
-                  maxLength={16}
-                  placeholder="Name"
-                  onChange={(e) => setNickname(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && add()}
-                />
-                <button className="btn-primary" disabled={!nickname.trim() || busy} onClick={add}>Add</button>
-              </div>
+              <ProfileForm
+                submitLabel="Add"
+                onSubmit={async (data) => { await onAdd(data); onClose(); }}
+              />
             </div>
             {error ? <div className="gp-err">{error}</div> : null}
           </div>

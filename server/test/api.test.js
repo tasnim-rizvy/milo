@@ -85,13 +85,22 @@ test('kid profiles: create, unique keys, validation, delete (never the last)', a
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
   });
 
-  const a = await (await post({ nickname: 'Zoe', avatar: '🐰' })).json();
+  const a = await (await post({ nickname: 'Zoe', age: 5, avatar: '🐰' })).json();
   assert.equal(a.child.key, 'kid-zoe');
   assert.equal(a.child.level, 1);
-  const b = await (await post({ nickname: 'Zoe' })).json();
+  assert.equal(a.child.age_band, 5);
+  assert.equal(a.child.reading_band, 'tap-first');
+  assert.equal((await post({ nickname: 'Old', age: 9 })).status, 400);
+  assert.equal((await post({ nickname: 'NoAge' })).status, 400);
+  const r6 = await (await post({ nickname: 'Rey', age: 6, reads: true, interests: ['space', 'bogus', 'cars', 'music', 'robots'], home_language: 'Hindi' })).json();
+  assert.equal(r6.child.level, 2);
+  assert.equal(r6.child.reading_band, 'tap-and-type');
+  assert.deepEqual(r6.child.interests, ['space', 'cars', 'music']);
+  assert.equal(r6.child.home_language, 'Hindi');
+  const b = await (await post({ nickname: 'Zoe', age: 4 })).json();
   assert.equal(b.child.key, 'kid-zoe-2');
-  assert.equal((await post({ nickname: '   ' })).status, 400);
-  assert.equal((await post({ nickname: 'x'.repeat(17) })).status, 400);
+  assert.equal((await post({ nickname: '   ', age: 4 })).status, 400);
+  assert.equal((await post({ nickname: 'x'.repeat(17), age: 4 })).status, 400);
 
   const del = await fetch(`${base}/api/children/kid-zoe-2`, { method: 'DELETE' });
   assert.equal(del.status, 200);

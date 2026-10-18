@@ -47,18 +47,29 @@ export async function buildApp(opts = {}) {
   const slug = (s) => String(s || '').toLowerCase().normalize('NFKD')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20) || 'kid';
 
+  // Profile form → starting point. Age + "can read words" set the reading band
+  // and the first level; from then on real progress (mastery gates) takes over.
+  const INTERESTS = ['animals', 'dinosaurs', 'cars', 'space', 'music', 'drawing', 'cats', 'dogs', 'sports', 'robots'];
   app.post('/api/children', async (req, reply) => {
     const body = req.body || {};
     const raw = String(body.nickname || '').replace(/\s+/g, ' ').trim();
     if (raw.length < 1 || raw.length > 16) {
       return reply.code(400).send({ error: 'nickname must be 1–16 characters' });
     }
+    const age = Number(body.age);
+    if (!Number.isInteger(age) || age < 4 || age > 6) {
+      return reply.code(400).send({ error: 'age must be 4, 5 or 6' });
+    }
+    const reads = body.reads === true;
     const avatar = AVATARS.includes(body.avatar) ? body.avatar : '🦊';
+    const interests = [...new Set(Array.isArray(body.interests) ? body.interests : [])]
+      .filter((i) => INTERESTS.includes(i)).slice(0, 3);
+    const home_language = String(body.home_language || '').replace(/\s+/g, ' ').trim().slice(0, 20);
     let key = `kid-${slug(raw)}`;
     for (let i = 2; store.child(key); i++) key = `kid-${slug(raw)}-${i}`;
     const child = {
-      key, nickname: raw, age_band: 4, reading_band: 'tap-first', avatar,
-      interests: [], home_language: '', level: 1, total_stars: 0,
+      key, nickname: raw, age_band: age, reading_band: reads ? 'tap-and-type' : 'tap-first', avatar,
+      interests, home_language, level: age >= 6 && reads ? 2 : 1, total_stars: 0,
       created_at: Date.now(), first_try_correct: 0, first_try_total: 0,
       last_summary: '', last_seen: 0,
     };

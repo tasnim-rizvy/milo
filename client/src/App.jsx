@@ -7,6 +7,7 @@ import Confetti from './components/Confetti.jsx';
 import BadgePop from './components/BadgePop.jsx';
 import StickerBook from './components/StickerBook.jsx';
 import KidProfiles from './components/KidProfiles.jsx';
+import ProfileForm from './components/ProfileForm.jsx';
 import DevPanel from './components/DevPanel.jsx';
 
 const IDLE_MS = 45000;
@@ -37,6 +38,7 @@ export default function App() {
   const [latSamples, setLatSamples] = useState([]);
   const [stickersOpen, setStickersOpen] = useState(false);
   const [profilesOpen, setProfilesOpen] = useState(false);
+  const [newKidOpen, setNewKidOpen] = useState(false);
   const [badges, setBadges] = useState([]);
   const [dev, setDev] = useState(null);
   const [muted, setMuted] = useState(sound.muted);
@@ -225,8 +227,8 @@ export default function App() {
   // lazily; each kid carries their own words, level and star total).
   const openProfiles = useCallback(() => { sound.tap(); setProfilesOpen(true); }, []);
 
-  const makeKid = useCallback(async ({ nickname, avatar }) => {
-    const r = await addChild(nickname, avatar);
+  const makeKid = useCallback(async (profile) => {
+    const r = await addChild(profile);
     reloadChildren();
     switchChild(r.child.key);
     return r;
@@ -257,6 +259,7 @@ export default function App() {
           onSwitch={switchChild}
           onStickers={openStickers}
           onProfiles={openProfiles}
+          onNewKid={() => { sound.tap(); setNewKidOpen(true); }}
           muted={muted}
           onToggleMute={() => setMuted(sound.toggle())}
         />
@@ -289,6 +292,20 @@ export default function App() {
       {badgePop && <BadgePop badge={badgePop} onDone={() => setBadgePop(null)} />}
       {stickersOpen && (
         <StickerBook badges={badges} child={child} onClose={() => { sound.tap(); setStickersOpen(false); }} />
+      )}
+      {newKidOpen && (
+        <div className="overlay" onClick={() => setNewKidOpen(false)} role="dialog" aria-label="Tell Milo about you">
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head">
+              <div>
+                <div className="sheet-title">Hi, I'm Milo! 🦊</div>
+                <div className="sheet-sub">Tell me about you, so I can pick the right words.</div>
+              </div>
+              <button className="icon-btn" onClick={() => setNewKidOpen(false)} aria-label="Close">✕</button>
+            </div>
+            <ProfileForm onSubmit={async (data) => { await makeKid(data); setNewKidOpen(false); }} />
+          </div>
+        </div>
       )}
       {profilesOpen && (
         <KidProfiles
