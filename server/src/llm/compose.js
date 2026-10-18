@@ -207,7 +207,10 @@ export async function composeFreeTurn({ mode, task = null, child, store, input, 
   const user = buildChatPrompt({ card, mode, input, history, task });
 
   const started = Date.now();
-  for (const provider of providers) {
+  let lastError = '';
+  // each provider may list several models (own quotas): try them in order
+  const attempts = providers.flatMap((p) => (p.models || [p.model]).map((model) => ({ ...p, model })));
+  for (const provider of attempts) {
     try {
       const streamer = provider.kind === 'gemini' ? streamGemini : streamGroq;
       let text = '';
@@ -237,7 +240,7 @@ export async function composeFreeTurn({ mode, task = null, child, store, input, 
         if (bad.length) {
           return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started, provider: provider.name, reason: 'rejected', detail: bad.join(' · ') };
         }
-        return { say: joined, usedLLM: true, ms: Date.now() - started, provider: provider.name };
+        return { say: joined, usedLLM: true, ms: Date.now() - started, provider: provider.name, model: provider.model };
       }
       const clean = sanitizeModelText(text, scriptedFallback);
       if (clean.replaced && clean.text === scriptedFallback) {
@@ -247,10 +250,11 @@ export async function composeFreeTurn({ mode, task = null, child, store, input, 
       if (bad.length) {
         return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started, provider: provider.name, reason: 'rejected', detail: bad.join(' · ') };
       }
-      return { say: clean.text, usedLLM: true, ms: Date.now() - started, provider: provider.name };
-    } catch {
-      // fall through to the next provider
+      return { say: clean.text, usedLLM: true, ms: Date.now() - started, provider: provider.name, model: provider.model };
+    } catch (e) {
+      // fall through to the next provider — but remember why (429, ttft-budget, …)
+      lastError = String(e?.message || e).slice(0, 400);
     }
   }
-  return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started, reason: 'error' };
+  return { say: scriptedFallback, usedLLM: false, ms: Date.now() - started, reason: 'error', detail: lastError };
 }

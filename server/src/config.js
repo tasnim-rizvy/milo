@@ -26,6 +26,10 @@ export const config = {
     // Llama models left Groq's free tier in Aug 2026 — GPT-OSS is the
     // current card-free default. Override with GROQ_MODEL anytime.
     model: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
+    // Same key, other models: each has its own per-minute / per-day token quota, so
+    // when the primary is rate-limited (429) the next one still answers with AI.
+    fallbackModels: (process.env.GROQ_FALLBACK_MODELS || 'openai/gpt-oss-20b')
+      .split(',').map((m) => m.trim()).filter(Boolean),
   },
   llm: {
     // First-token budget: if a provider hasn't produced a token by then, the
@@ -58,6 +62,7 @@ export function llmProviders() {
       name: 'groq',
       apiKey: config.groq.key,
       model: config.groq.model,
+      models: [...new Set([config.groq.model, ...config.groq.fallbackModels])],
       kind: 'groq',
     },
   ].filter(Boolean);

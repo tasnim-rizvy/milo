@@ -66,7 +66,11 @@ async function* sseFetch(url, init, { firstTokenMs, totalMs, signal }, extract) 
 
   try {
     const res = await fetch(url, { ...init, method: 'POST', signal: ctrl.signal });
-    if (!res.ok || !res.body) throw new Error(`llm-http-${res.status}`);
+    if (!res.ok || !res.body) {
+      // keep the provider's own words (which limit, how long to wait) for the event log
+      const why = res.ok ? '' : await res.text().then((t) => (JSON.parse(t)?.error?.message || t)).catch(() => '');
+      throw new Error(`llm-http-${res.status}${why ? ` ${why.replace(/\s+/g, ' ').slice(0, 400)}` : ''}`);
+    }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buf = '';
