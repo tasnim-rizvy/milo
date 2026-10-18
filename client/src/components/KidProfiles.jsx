@@ -12,12 +12,13 @@ const ago = (ts) => {
 // The kid-profiles corner: a tiny math gate keeps kids out, then profiles can
 // create or remove kid profiles. Each profile keeps its own words, level and
 // stars in the local database — the kid just taps their own name to continue.
-export default function KidProfiles({ childrenList = [], childKey, onSwitch, onAdd, onRemove, onClose }) {
+export default function KidProfiles({ childrenList = [], childKey, onSwitch, onAdd, onUpdate, onRemove, onClose }) {
   const [gate] = useState(() => ({ a: 3 + Math.floor(Math.random() * 5), b: 2 + Math.floor(Math.random() * 5) }));
   const [answer, setAnswer] = useState('');
   const [passed, setPassed] = useState(false);
   const [gateErr, setGateErr] = useState('');
   const [confirmKey, setConfirmKey] = useState(null);
+  const [editKey, setEditKey] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -74,7 +75,8 @@ export default function KidProfiles({ childrenList = [], childKey, onSwitch, onA
         ) : (
           <div className="gp-list">
             {childrenList.map((c) => (
-              <div key={c.key} className={`kid-row ${c.key === childKey ? 'current' : ''}`}>
+              <div key={c.key}>
+              <div className={`kid-row ${c.key === childKey ? 'current' : ''}`}>
                 <div className="kid-ava" aria-hidden="true">{c.avatar || '🦊'}</div>
                 <div className="kid-meta">
                   <div className="kid-name">
@@ -86,12 +88,29 @@ export default function KidProfiles({ childrenList = [], childKey, onSwitch, onA
                   </div>
                 </div>
                 <button className="kid-btn" onClick={() => { onSwitch(c.key); onClose(); }}>Play</button>
+                <button className="kid-btn" onClick={() => { setEditKey(editKey === c.key ? null : c.key); setError(''); }}>Edit</button>
                 <button
                   className={`kid-btn danger ${confirmKey === c.key ? 'on' : ''}`}
                   onClick={() => remove(c.key)}
                 >
                   {confirmKey === c.key ? 'Sure?' : 'Remove'}
                 </button>
+              </div>
+              {editKey === c.key && (
+                <div className="gp-add edit">
+                  <div className="gp-add-title">✏️ Edit {c.nickname}</div>
+                  <ProfileForm
+                    key={c.key}
+                    submitLabel="Save changes"
+                    initial={{
+                      nickname: c.nickname, age: c.age_band, avatar: c.avatar,
+                      reads: c.reading_band === 'tap-and-type', interests: c.interests || [],
+                    }}
+                    onCancel={() => setEditKey(null)}
+                    onSubmit={async (data) => { await onUpdate(c.key, data); setEditKey(null); }}
+                  />
+                </div>
+              )}
               </div>
             ))}
 

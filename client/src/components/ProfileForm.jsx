@@ -8,12 +8,12 @@ const INTERESTS = [
 
 // "Tell Milo about you": the answers set the reading band and the first level;
 // after that, real progress (mastery gates) moves the child up.
-export default function ProfileForm({ onSubmit, submitLabel = 'Start playing' }) {
-  const [nickname, setNickname] = useState('');
-  const [age, setAge] = useState(null);
-  const [avatar, setAvatar] = useState('🦊');
-  const [reads, setReads] = useState(null);
-  const [interests, setInterests] = useState([]);
+export default function ProfileForm({ onSubmit, submitLabel = 'Start playing', initial = null, onCancel = null }) {
+  const [nickname, setNickname] = useState(initial?.nickname ?? '');
+  const [age, setAge] = useState(initial?.age ?? null);
+  const [avatar, setAvatar] = useState(initial?.avatar ?? '🦊');
+  const [reads, setReads] = useState(initial?.reads ?? null);
+  const [interests, setInterests] = useState(initial?.interests ?? []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -72,6 +72,7 @@ export default function ProfileForm({ onSubmit, submitLabel = 'Start playing' })
 
       {error ? <div className="gp-err">{error}</div> : null}
       <button className="btn-primary pf-go" disabled={!ready} onClick={submit}>{submitLabel}</button>
+      {onCancel ? <button className="kid-btn" onClick={onCancel}>Cancel</button> : null}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { addChild, getChildren, getProgress, removeChild, resetDemo, startSession, sendMessage } from './api.js';
+import { addChild, updateChild, getChildren, getProgress, removeChild, resetDemo, startSession, sendMessage } from './api.js';
 import { sound } from './sound.js';
 import Home from './components/Home.jsx';
 import ChatView from './components/ChatView.jsx';
@@ -248,6 +248,11 @@ export default function App() {
     return r;
   }, [reloadChildren, switchChild]);
 
+  const editKid = useCallback(async (key, profile) => {
+    await updateChild(key, profile);
+    reloadChildren();
+  }, [reloadChildren]);
+
   const dropKid = useCallback(async (key) => {
     await removeChild(key);
     const d = await getChildren();
@@ -314,6 +319,7 @@ export default function App() {
           childKey={childKey}
           onSwitch={switchChild}
           onAdd={makeKid}
+          onUpdate={editKid}
           onRemove={dropKid}
           onClose={() => { setProfilesOpen(false); }}
         />

@@ -190,3 +190,31 @@ test('progress summary: level path, learned words, feelings, milestones that unl
   assert.equal(f.summary.words.learned.length, 0);
   assert.ok(f.summary.milestones.every((m) => !m.earned));
 });
+
+test('edit a profile: own device only, validated, progress and level untouched', async (t) => {
+  const { app, base, store } = await start();
+  t.after(() => app.close());
+  const A = { 'x-milo-device': 'device-aaaaaaaaaaaaaaaa', 'content-type': 'application/json' };
+  const B = { 'x-milo-device': 'device-bbbbbbbbbbbbbbbb', 'content-type': 'application/json' };
+  const made = (await (await fetch(`${base}/api/children`, { method: 'POST', headers: A, body: JSON.stringify({ nickname: 'Mia', age: 4, interests: ['cars'] }) })).json()).child;
+  store.addStars(made.key, 7);
+  const patch = (key, headers, body) => fetch(`${base}/api/children/${key}`, { method: 'PATCH', headers, body: JSON.stringify(body) });
+
+  const ok = await patch(made.key, A, { nickname: 'Mimi', age: 6, reads: true, avatar: '🐼', interests: ['space', 'music', 'nope'] });
+  assert.equal(ok.status, 200);
+  const c = (await ok.json()).child;
+  assert.equal(c.nickname, 'Mimi');
+  assert.equal(c.age_band, 6);
+  assert.equal(c.reading_band, 'tap-and-type');
+  assert.equal(c.avatar, '🐼');
+  assert.deepEqual(c.interests, ['space', 'music']);
+  assert.equal(c.key, made.key, 'the profile key never changes');
+  assert.equal(c.level, 1, 'level is earned, not edited');
+  assert.equal(c.total_stars, 7, 'stars are kept');
+
+  assert.equal((await patch(made.key, A, { nickname: '', age: 5 })).status, 400);
+  assert.equal((await patch(made.key, A, { nickname: 'Mimi', age: 9 })).status, 400);
+  assert.equal((await patch(made.key, B, { nickname: 'Hax', age: 5 })).status, 404, 'another device cannot edit');
+  assert.equal((await patch('maya', A, { nickname: 'Hax', age: 5 })).status, 404, 'demo kids are not editable');
+  assert.equal(store.child(made.key).nickname, 'Mimi');
+});

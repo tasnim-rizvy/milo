@@ -74,32 +74,51 @@ export async function buildApp(opts = {}) {
   // Profile form → starting point. Age + "can read words" set the reading band
   // and the first level; from then on real progress (mastery gates) takes over.
   const INTERESTS = ['animals', 'dinosaurs', 'cars', 'space', 'music', 'drawing', 'cats', 'dogs', 'sports', 'robots'];
+  // Shared by create and edit: the profile form's fields, validated.
+  const parseProfile = (body = {}) => {
+    const nickname = String(body.nickname || '').replace(/\s+/g, ' ').trim();
+    if (nickname.length < 1 || nickname.length > 16) return { error: 'nickname must be 1–16 characters' };
+    const age = Number(body.age);
+    if (!Number.isInteger(age) || age < 4 || age > 6) return { error: 'age must be 4, 5 or 6' };
+    return {
+      nickname, age,
+      reads: body.reads === true,
+      avatar: AVATARS.includes(body.avatar) ? body.avatar : '🦊',
+      interests: [...new Set(Array.isArray(body.interests) ? body.interests : [])].filter((i) => INTERESTS.includes(i)),
+    };
+  };
+
   app.post('/api/children', async (req, reply) => {
     const dev = deviceOf(req);
     if (!dev) return reply.code(400).send({ error: 'missing device id' });
-    const body = req.body || {};
-    const raw = String(body.nickname || '').replace(/\s+/g, ' ').trim();
-    if (raw.length < 1 || raw.length > 16) {
-      return reply.code(400).send({ error: 'nickname must be 1–16 characters' });
-    }
-    const age = Number(body.age);
-    if (!Number.isInteger(age) || age < 4 || age > 6) {
-      return reply.code(400).send({ error: 'age must be 4, 5 or 6' });
-    }
-    const reads = body.reads === true;
-    const avatar = AVATARS.includes(body.avatar) ? body.avatar : '🦊';
-    const interests = [...new Set(Array.isArray(body.interests) ? body.interests : [])]
-      .filter((i) => INTERESTS.includes(i));
-    let key = `kid-${slug(raw)}`;
-    for (let i = 2; store.child(key); i++) key = `kid-${slug(raw)}-${i}`;
+    const f = parseProfile(req.body);
+    if (f.error) return reply.code(400).send({ error: f.error });
+    let key = `kid-${slug(f.nickname)}`;
+    for (let i = 2; store.child(key); i++) key = `kid-${slug(f.nickname)}-${i}`;
     const child = {
-      key, nickname: raw, age_band: age, reading_band: reads ? 'tap-and-type' : 'tap-first', avatar,
-      interests, home_language: '', level: age >= 6 && reads ? 2 : 1, total_stars: 0,
+      key, nickname: f.nickname, age_band: f.age, reading_band: f.reads ? 'tap-and-type' : 'tap-first', avatar: f.avatar,
+      interests: f.interests, home_language: '', level: f.age >= 6 && f.reads ? 2 : 1, total_stars: 0,
       created_at: Date.now(), first_try_correct: 0, first_try_total: 0,
       last_summary: '', last_seen: 0, owner: dev,
     };
     store.saveChild(child);
     return { ok: true, child: summarizeChild(child) };
+  });
+
+  // Edit a profile (name, age, picture, reading, interests). Level, stars and word
+  // progress are never touched — only the real lessons move those.
+  app.patch('/api/children/:key', async (req, reply) => {
+    const dev = deviceOf(req);
+    const kid = store.child(req.params.key);
+    if (!kid || kid.owner === '' || kid.owner !== dev) return reply.code(404).send({ error: 'no such child' });
+    const f = parseProfile(req.body);
+    if (f.error) return reply.code(400).send({ error: f.error });
+    Object.assign(kid, {
+      nickname: f.nickname, age_band: f.age, avatar: f.avatar, interests: f.interests,
+      reading_band: f.reads ? 'tap-and-type' : 'tap-first',
+    });
+    store.saveChild(kid);
+    return { ok: true, child: summarizeChild(kid) };
   });
 
   app.delete('/api/children/:key', async (req, reply) => {

@@ -21,6 +21,12 @@ export const addChild = (profile) =>
     headers: H({ 'content-type': 'application/json' }),
     body: JSON.stringify(profile),
   }).then(j);
+export const updateChild = (key, profile) =>
+  fetch(`/api/children/${encodeURIComponent(key)}`, {
+    method: 'PATCH',
+    headers: H({ 'content-type': 'application/json' }),
+    body: JSON.stringify(profile),
+  }).then(j);
 export const removeChild = (key) =>
   fetch(`/api/children/${encodeURIComponent(key)}`, { method: 'DELETE', headers: H() }).then(j);
 export const getHealth = () => fetch('/api/health').then(j);
